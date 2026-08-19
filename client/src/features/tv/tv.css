@@ -1,0 +1,313 @@
+/* TV Scoreboard — dark, high-contrast, legible from across a room. Reuses
+   the app's existing CSS variables (index.css) so it stays on-brand. */
+
+.tv-root {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(at 50% 0%, #10151f 0%, #05070b 70%);
+  color: var(--text, #ecf0f6);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+  cursor: none;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(16px, 2.2vh, 40px) clamp(24px, 3vw, 64px);
+  gap: clamp(10px, 1.8vh, 28px);
+}
+
+.tv-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tv-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  font-size: clamp(18px, 1.9vw, 30px);
+  color: var(--accent, #d4af37);
+}
+.tv-brand .logo-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--accent, #d4af37); box-shadow: 0 0 16px var(--accent, #d4af37); }
+
+.tv-tournament {
+  font-size: clamp(14px, 1.2vw, 20px);
+  color: var(--text-dim, #8b97a8);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+}
+
+.tv-connection-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: clamp(10px, 0.9vw, 14px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-faint, #5d6979);
+}
+.tv-connection-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-faint, #5d6979); }
+.tv-connection-badge.connected { color: var(--green, #2ecc71); }
+.tv-connection-badge.connected .tv-connection-dot { background: var(--green, #2ecc71); box-shadow: 0 0 8px var(--green, #2ecc71); }
+.tv-connection-badge.connecting .tv-connection-dot,
+.tv-connection-badge.reconnecting .tv-connection-dot { background: var(--warning, #f39c12); animation: tvPulse 1s ease-in-out infinite; }
+.tv-connection-badge.reconnecting, .tv-connection-badge.connecting { color: var(--warning, #f39c12); }
+.tv-connection-badge.unavailable .tv-connection-dot { background: var(--danger, #e74c3c); }
+.tv-connection-badge.unavailable { color: var(--danger, #e74c3c); }
+.tv-connection-badge.local .tv-connection-dot { background: var(--info, #3498db); }
+.tv-connection-badge.local { color: var(--info, #3498db); }
+
+.tv-tablebadge {
+  font-size: clamp(14px, 1.3vw, 22px);
+  font-weight: 700;
+  background: rgba(212,175,55,0.12);
+  border: 1px solid rgba(212,175,55,0.35);
+  border-radius: 999px;
+  padding: 6px 18px;
+}
+
+.tv-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: clamp(12px, 2vw, 40px);
+  min-height: 0;
+}
+
+.tv-player {
+  border-radius: 20px;
+  padding: clamp(14px, 2.4vh, 34px);
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  border: 2px solid var(--border, #232c3a);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1.4vh, 18px);
+  min-width: 0;
+  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+}
+.tv-player.active {
+  border-color: var(--accent, #d4af37);
+  box-shadow: 0 0 0 2px rgba(212,175,55,0.25), 0 12px 40px rgba(212,175,55,0.12);
+  background: linear-gradient(180deg, rgba(212,175,55,0.08), rgba(212,175,55,0.02));
+}
+.tv-player.winner { border-color: var(--green, #2ecc71); box-shadow: 0 0 0 2px rgba(46,204,113,0.3); }
+
+.tv-player-name {
+  font-size: clamp(20px, 2.6vw, 46px);
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tv-player-score {
+  font-size: clamp(48px, 8vw, 128px);
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.tv-player-frames {
+  font-size: clamp(14px, 1.4vw, 24px);
+  color: var(--text-dim, #8b97a8);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.tv-player-frames b { color: var(--text, #ecf0f6); font-size: 1.3em; }
+
+.tv-player-breaks {
+  display: flex;
+  gap: clamp(10px, 1.6vw, 28px);
+  font-size: clamp(11px, 1vw, 16px);
+  color: var(--text-faint, #5d6979);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.tv-player-breaks b { color: var(--accent-2, #f1c40f); font-size: 1.4em; font-weight: 800; text-transform: none; letter-spacing: 0; display: block; }
+
+.tv-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(8px, 1.6vh, 20px);
+}
+.tv-timer {
+  font-size: clamp(28px, 3.4vw, 56px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border, #232c3a);
+  border-radius: 16px;
+  padding: 10px 24px;
+}
+.tv-timer.paused { color: var(--warning, #f39c12); }
+.tv-vs { font-size: clamp(14px, 1.6vw, 24px); color: var(--text-faint, #5d6979); font-weight: 700; letter-spacing: 4px; }
+
+.tv-snookers-banner {
+  font-size: clamp(13px, 1.2vw, 20px);
+  font-weight: 700;
+  color: var(--danger, #e74c3c);
+  background: rgba(231,76,60,0.12);
+  border: 1px solid rgba(231,76,60,0.35);
+  border-radius: 10px;
+  padding: 6px 16px;
+  text-align: center;
+  animation: tvPulse 1.6s ease-in-out infinite;
+}
+@keyframes tvPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+.tv-winner-banner {
+  font-size: clamp(20px, 3vw, 44px);
+  font-weight: 900;
+  color: var(--green, #2ecc71);
+  text-align: center;
+  animation: tvPop 0.4s ease;
+}
+@keyframes tvPop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* ---- Ball tracker ---- */
+.tv-balls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(8px, 1.4vh, 16px);
+}
+/* All balls (red + the six colours) sit in a single, non-wrapping row so the
+   layout stays a clean horizontal strip on desktop, tablet and TV alike; on
+   very narrow screens it scrolls horizontally instead of breaking to a 2nd line. */
+.tv-balls-row {
+  display: flex;
+  gap: clamp(6px, 0.9vw, 16px);
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 4px 2px;
+}
+.tv-ball {
+  width: clamp(22px, 2.4vw, 38px);
+  height: clamp(22px, 2.4vw, 38px);
+  border-radius: 50%;
+  box-shadow: inset 0 -3px 6px rgba(0,0,0,0.4), inset 0 2px 3px rgba(255,255,255,0.35);
+  transition: opacity 0.3s, transform 0.3s, box-shadow 0.3s;
+  flex-shrink: 0;
+  display: inline-block;
+  box-sizing: border-box;
+  /* Fully de-chrome the <button> so a clickable ball is pixel-identical to
+     the plain (non-interactive) colour balls — no browser button face,
+     no focus ring, no native disabled greying. */
+  border: none;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: none;
+}
+.tv-ball.potted { opacity: 0.12; transform: scale(0.7); box-shadow: none; }
+.tv-ball.on { box-shadow: 0 0 0 3px var(--accent, #d4af37), 0 0 14px var(--accent, #d4af37); transform: scale(1.15); }
+.tv-ball.color { width: clamp(22px, 2.4vw, 38px); height: clamp(22px, 2.4vw, 38px); }
+.tv-ball:not(:disabled) { cursor: pointer; }
+.tv-ball:disabled { opacity: 0.35; }
+
+.tv-ball-group {
+  display: flex;
+  align-items: center;
+  gap: clamp(4px, 0.6vw, 10px);
+  flex-shrink: 0;
+  padding-right: clamp(6px, 1vw, 18px);
+  margin-right: clamp(6px, 1vw, 18px);
+  border-right: 1px solid var(--border, #232c3a);
+}
+.tv-ball-count {
+  font-size: clamp(14px, 1.5vw, 24px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text, #ecf0f6);
+  min-width: 2ch;
+}
+.tv-ball-restore {
+  width: clamp(18px, 1.8vw, 28px);
+  height: clamp(18px, 1.8vw, 28px);
+  border-radius: 50%;
+  border: 1px solid var(--border, #232c3a);
+  background: rgba(255,255,255,0.05);
+  color: var(--text-dim, #8b97a8);
+  font-size: clamp(11px, 1.1vw, 16px);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: border-color 0.2s, color 0.2s, opacity 0.2s;
+  cursor: none;
+}
+.tv-ball-restore:not(:disabled) { cursor: pointer; }
+.tv-ball-restore:not(:disabled):hover { border-color: var(--accent, #d4af37); color: var(--accent, #d4af37); }
+.tv-ball-restore:disabled { opacity: 0.3; }
+
+/* ---- Remote fallback controls (on-screen, D-pad navigable) ---- */
+.tv-remote {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+.tv-remote-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.tv-remote-btn {
+  font-family: inherit;
+  font-size: clamp(11px, 0.95vw, 15px);
+  font-weight: 700;
+  color: var(--text, #ecf0f6);
+  background: rgba(255,255,255,0.05);
+  border: 2px solid var(--border, #232c3a);
+  border-radius: 10px;
+  padding: 8px 14px;
+  cursor: none;
+}
+.tv-remote-btn.focused { border-color: var(--accent, #d4af37); background: rgba(212,175,55,0.15); }
+.tv-remote-btn.red { border-color: rgba(229,57,53,0.5); }
+.tv-remote-btn.green { border-color: rgba(39,174,96,0.5); }
+.tv-remote-btn.yellow { border-color: rgba(244,208,63,0.5); }
+.tv-remote-btn.blue { border-color: rgba(41,128,255,0.5); }
+
+.tv-fullscreen-hint {
+  position: absolute;
+  bottom: 16px;
+  right: 20px;
+  font-size: 13px;
+  color: var(--text-faint, #5d6979);
+  opacity: 0.7;
+}
+
+.tv-idle {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  color: var(--text-dim, #8b97a8);
+  font-size: clamp(18px, 2vw, 30px);
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .tv-main { grid-template-columns: 1fr; grid-template-rows: auto auto auto; }
+}
