@@ -28,6 +28,7 @@ import { SellJetonsModal } from './features/shifts/components/SellJetonsModal.js
 import { AddJetonsModal } from './features/shifts/components/AddJetonsModal.jsx';
 import { EditGameModal } from './features/tables/components/EditGameModal.jsx';
 import { StaffModal } from './features/staff/components/StaffModal.jsx';
+import { PlayerModal } from './features/customers/components/PlayerModal.jsx';
 
 export function App() {
   const [activeTab, setActiveTab] = useState('tables');
@@ -140,6 +141,7 @@ export function App() {
           onOpenPay={(pid) => setPendingAction({ type: 'pay', playerId: pid })}
           onOpenSMS={(pid) => setPendingAction({ type: 'sms', playerId: pid })}
           onOpenAdvance={(pid) => setPendingAction({ type: 'advance', playerId: pid })}
+          onEditPlayer={(pid) => setPendingAction({ type: 'editPlayer', playerId: pid })}
         />
       )}
       <AddFauxMiseModal key={`faux-${actionKey}`} />
@@ -147,6 +149,7 @@ export function App() {
       <AddJetonsModal key={`addjetons-${actionKey}`} />
       <EditGameModal key={`editgame-${actionKey}`} />
       <StaffModal key={`staff-${actionKey}`} />
+      <PlayerModal key={`player-${actionKey}`} />
     </DashboardLayout>
   );
 }

@@ -3,7 +3,7 @@ import { useTranslation } from '../../../hooks/useTranslation.js';
 import { getPlayerStats } from '../../../core/utils/customerLedger.js';
 import { fullName, initials, fmt, isBirthdayToday, hoursUntilBirthday, ageFromBirthdate, fmtDate } from '../../../core/utils/timeUtils.js';
 
-export function PlayerProfileModal({ playerId, onClose, onOpenPay, onOpenSMS, onOpenAdvance }) {
+export function PlayerProfileModal({ playerId, onClose, onOpenPay, onOpenSMS, onOpenAdvance, onEditPlayer }) {
   const { t, lang } = useTranslation();
   
   const players = useJubyStore((state) => state.players);
@@ -164,6 +164,17 @@ export function PlayerProfileModal({ playerId, onClose, onOpenPay, onOpenSMS, on
                 💬 SMS
               </button>
             )}
+            <button 
+              type="button" 
+              className="btn btn-info" 
+              onClick={() => {
+                onClose();
+                if (onEditPlayer) onEditPlayer(playerId);
+              }}
+              style={{ flex: 1 }}
+            >
+              ✏️ {t('edit') || 'Modifier'}
+            </button>
           </div>
 
           {/* History Lists */}
