@@ -20,9 +20,9 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Support large JSON payloads
 
-// Basic check route
-app.get('/api/status', (req, res) => {
-  res.json({
+// Health check routes
+app.get(['/api', '/api/healthz', '/api/status'], (req, res) => {
+  res.status(200).json({
     status: 'online',
     message: 'Juby Club API Server is running',
     timestamp: new Date().toISOString()
