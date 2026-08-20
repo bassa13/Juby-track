@@ -237,28 +237,31 @@ export const useJubyStore = create((set, get) => {
 
     // Player CRUD Actions
     addPlayer: (playerData) => {
-      const { players } = get();
+      const { players, currentUser } = get();
       const existing = playerData.id ? players.find(p => p.id === playerData.id) : null;
       let updated;
+      let resultPlayer;
       
       if (existing) {
-        updated = players.map(p => p.id === playerData.id ? { ...p, ...playerData } : p);
+        resultPlayer = { ...existing, ...playerData };
+        updated = players.map(p => p.id === playerData.id ? resultPlayer : p);
       } else {
-        const newPlayer = {
-          id: uid(),
-          name: playerData.name || '',
-          lastname: playerData.lastname || '',
-          phone: playerData.phone || '',
+        resultPlayer = {
+          id: playerData.id || uid(),
+          name: (playerData.name || '').trim(),
+          lastname: (playerData.lastname || '').trim(),
+          phone: (playerData.phone || '').trim(),
           photo: playerData.photo || null,
           birthdate: playerData.birthdate || '',
-          isStaff: playerData.isStaff || false,
+          isStaff: Boolean(playerData.isStaff),
+          createdByStaffId: currentUser?.id || 'admin',
           createdAt: Date.now()
         };
-        updated = [...players, newPlayer];
+        updated = [...players, resultPlayer];
       }
       set({ players: updated });
       persist(get());
-      return { success: true };
+      return { success: true, player: resultPlayer };
     },
 
     deletePlayer: (playerId) => {

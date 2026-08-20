@@ -33,10 +33,7 @@ export function PlayersTab({ onOpenProfile, onOpenPay, onOpenSMS, onAddPlayer })
       const phoneMatch = (p.phone || '').includes(search);
       if (search && !nameMatch && !phoneMatch) return false;
 
-      // 2. Staff relation filter (Staff only sees their own clients)
-      if (!isAdmin && p.stats.gamesPlayed === 0 && p.stats.totalPaid === 0) return false;
-
-      // 3. Tab filter
+      // 2. Tab filter
       if (filter === 'debt') return p.stats.balance > 0;
       if (filter === 'paid') return p.stats.balance <= 0 && p.stats.gamesPlayed > 0;
       if (filter === 'staff') return p.isStaff;
