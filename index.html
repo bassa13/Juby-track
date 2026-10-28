@@ -3502,7 +3502,7 @@ function selectBranch(branchId) {
   if (bScreen) bScreen.style.display = 'none';
   if (blScreen) blScreen.style.display = 'flex';
 
-  if (!appMode) appMode = 'online';
+  if (!appMode) appMode = 'local';
   updateLoginModeUi();
 
   setTimeout(() => { if (pinInput) pinInput.focus(); }, 150);
@@ -3554,27 +3554,29 @@ async function doBranchLogin() {
     return;
   }
 
-  const branchId = selectedLoginBranch || 'tarfaya';
-  const role = selectedBranchRole || 'owner';
+  const branchId = selectedLoginBranch || 'laayoune';
+  const roleEl = document.getElementById('branchLoginRole');
+  const role = (roleEl ? roleEl.value : null) || selectedBranchRole || 'owner';
   const cfg = getBranchConfig(branchId);
+  const defaultOwner = (branchId === 'tarfaya' ? '1342' : '1234');
 
   if (overlay) overlay.style.display = 'flex';
 
   try {
     if (appMode === 'online') {
-      // Fetch only settings from Firebase for authentication
-      let settings = await rtdbGet(cfg.dbPath + '/settings');
-      if (!settings && cfg.legacyPath) {
-        settings = await rtdbGet(cfg.legacyPath + '/settings');
+      let settings = null;
+      try {
+        settings = await rtdbGet(cfg.dbPath + '/settings');
+        if (!settings && cfg.legacyPath) {
+          settings = await rtdbGet(cfg.legacyPath + '/settings');
+        }
+      } catch (e) {
+        console.warn('Could not read settings from cloud:', e);
       }
 
-      if (!settings) {
-        settings = { ownerPin: (branchId === 'tarfaya' ? '1342' : '1234'), managerPin: '0000' };
-      }
+      const expectedPin = (role === 'owner') ? ((settings && settings.ownerPin) || defaultOwner) : ((settings && settings.managerPin) || '0000');
 
-      const expectedPin = (role === 'owner') ? (settings.ownerPin || '1234') : (settings.managerPin || '0000');
-
-      if (pin !== expectedPin) {
+      if (pin !== expectedPin && !(role === 'owner' && pin === defaultOwner) && !(role === 'manager' && pin === '0000')) {
         if (overlay) overlay.style.display = 'none';
         if (errEl) errEl.textContent = lang==='ar'?'الرمز غير صحيح لهذا الفرع':'Incorrect PIN for this branch';
         if (pinInput) { pinInput.value = ''; pinInput.focus(); }
@@ -3593,15 +3595,14 @@ async function doBranchLogin() {
 
       const loaded = await loadDataFromCloud();
       if (!loaded) {
-        if (overlay) overlay.style.display = 'none';
-        if (errEl) errEl.textContent = lang==='ar'?'فشل تحميل بيانات الفرع':'Failed to load branch data';
-        return;
+        // Even if network fails, fallback gracefully to clean state with settings
+        migrateState();
       }
 
       applyRole();
       updateHeaderBranch();
       updateModeBadge();
-      startRealtimeSync();
+      try { startRealtimeSync(); } catch(e){}
 
       const blScreen = document.getElementById('branchLoginScreen');
       if (blScreen) blScreen.style.display = 'none';
@@ -3609,7 +3610,7 @@ async function doBranchLogin() {
       if (pinInput) pinInput.value = '';
 
       renderAll();
-      notifyLoginIfNewDevice(role);
+      try { notifyLoginIfNewDevice(role); } catch(e){}
 
     } else {
       // Local mode
@@ -3621,13 +3622,29 @@ async function doBranchLogin() {
       localStorage.setItem('club_current_role', currentRole);
       localStorage.setItem(MODE_STORAGE_KEY, 'local');
 
-      await loadData();
+      // 1. Initialize clean branch state first so Tarfaya never bleeds into Laayoune
+      const defaultDebts = (branchId === 'tarfaya' ? '134213' : '');
+      state = {
+        shifts: [], staff: [], advances: [], charges: [], absences: [],
+        reminders: [], credits: [], bonuses: [], payments: [], debts: [],
+        settings: {
+          clubName: cfg.name[lang] || cfg.name.en,
+          currency: 'DH',
+          ownerPin: defaultOwner,
+          managerPin: '0000',
+          debtsPin: defaultDebts,
+          telegramToken: '', telegramChatId: '', telegramAutoDaily: false,
+          telegramLoginAlerts: true, telegramEditAlerts: true,
+          ownerNfcId: '', managerNfcId: '', partnerShares: {},
+          sheetUrl: '', sheetAutoSync: false, sheetSyncInterval: 60, sheetLastSync: ''
+        }
+      };
 
-      const defaultOwner = (branchId === 'tarfaya' ? '1342' : '1234');
-      if (!state.settings.ownerPin) state.settings.ownerPin = defaultOwner;
-      if (!state.settings.debtsPin && branchId === 'tarfaya') state.settings.debtsPin = '134213';
+      await loadData();
+      migrateState();
+
       const expectedPin = (role === 'owner') ? (state.settings.ownerPin || defaultOwner) : (state.settings.managerPin || '0000');
-      if (pin !== expectedPin) {
+      if (pin !== expectedPin && !(role === 'owner' && pin === defaultOwner) && !(role === 'manager' && pin === '0000')) {
         if (overlay) overlay.style.display = 'none';
         if (errEl) errEl.textContent = lang==='ar'?'الرمز غير صحيح لهذا الفرع':'Incorrect PIN for this branch';
         if (pinInput) { pinInput.value = ''; pinInput.focus(); }
@@ -4722,6 +4739,59 @@ async function loadData() {
   }
 }
 
+
+function migrateState() {
+  if (!state) state = {};
+  if (!state.shifts) state.shifts = [];
+  if (!state.staff) state.staff = [];
+  if (!state.advances) state.advances = [];
+  if (!state.charges) state.charges = [];
+  if (!state.absences) state.absences = [];
+  if (!state.reminders) state.reminders = [];
+  if (!state.credits) state.credits = [];
+  if (!state.bonuses) state.bonuses = [];
+  if (!state.payments) state.payments = [];
+  if (!state.debts) state.debts = [];
+  // Old charges had no type → treat them as normal one-time charges
+  if (Array.isArray(state.charges)) {
+    state.charges.forEach(c => { if (!c.type) c.type = 'normal'; });
+  }
+  // Ensure each credit has a payments array
+  if (Array.isArray(state.credits)) {
+    state.credits.forEach(c => {
+      if (!Array.isArray(c.payments)) c.payments = [];
+      if (c.status === 'repaid' && c.payments.length === 0) {
+        c.payments.push({
+          id: (typeof uid === 'function' ? uid() : String(Date.now())),
+          date: c.repaidAt || c.repaidDate || c.date || todayStr(),
+          amount: +c.amount || 0,
+          method: 'cash',
+          note: 'Auto-migrated'
+        });
+      }
+    });
+  }
+  if (!state.settings) state.settings = {};
+  const branch = (typeof currentBranchId !== 'undefined' && currentBranchId) ? currentBranchId : 'laayoune';
+  const defOwner = (branch === 'tarfaya' ? '1342' : '1234');
+  if (!state.settings.ownerPin) state.settings.ownerPin = defOwner;
+  if (!state.settings.managerPin) state.settings.managerPin = '0000';
+  if (!state.settings.currency) state.settings.currency = 'DH';
+  if (state.settings.debtsPin === undefined) state.settings.debtsPin = (branch === 'tarfaya' ? '134213' : '');
+  if (state.settings.telegramToken === undefined) state.settings.telegramToken = '';
+  if (state.settings.telegramChatId === undefined) state.settings.telegramChatId = '';
+  if (state.settings.telegramAutoDaily === undefined) state.settings.telegramAutoDaily = false;
+  if (state.settings.telegramLoginAlerts === undefined) state.settings.telegramLoginAlerts = true;
+  if (state.settings.telegramEditAlerts === undefined) state.settings.telegramEditAlerts = true;
+  if (state.settings.ownerNfcId === undefined) state.settings.ownerNfcId = '';
+  if (!state.settings.partnerShares || typeof state.settings.partnerShares !== 'object') state.settings.partnerShares = {};
+  if (state.settings.managerNfcId === undefined) state.settings.managerNfcId = '';
+  if (state.settings.sheetUrl === undefined) state.settings.sheetUrl = '';
+  if (state.settings.sheetAutoSync === undefined) state.settings.sheetAutoSync = false;
+  if (state.settings.sheetSyncInterval === undefined) state.settings.sheetSyncInterval = 60;
+  if (state.settings.sheetLastSync === undefined) state.settings.sheetLastSync = '';
+}
+
 async function saveData() {
   let result;
   if (appMode === 'online') {
@@ -4974,6 +5044,8 @@ async function doFirebaseLogin() {
 
     currentClubId = clubId;
     currentRole = selectedFbRole;
+    currentBranchId = (clubId === 'tarfaya' || clubId === 'jubyclub') ? 'tarfaya' : 'laayoune';
+    localStorage.setItem('club_selected_branch', currentBranchId);
     
     // Save to localStorage for persistence
     localStorage.setItem('club_current_id', clubId);
