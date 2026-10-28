@@ -1,98 +1,153 @@
-# Juby Club Modernized Architecture (Supabase Backend)
+# 🎱 Juby Club — Management, Multi-Branch & Financial System
 
-This repository contains the production-ready, modernized architecture for **Juby Club — Billiard & Snooker Management Application**, powered exclusively by **Supabase** for cloud database persistence, authentication, storage, and real-time synchronization.
-
----
-
-## Architecture Overview
-
-- **Frontend Application**: React 19 + Vite SPA (`client/`)
-- **State Management**: Zustand (`useJubyStore.js`) with debounced local storage persistence & live Supabase Realtime synchronization engine (`supabaseSync.js`)
-- **Cloud Backend**: Supabase PostgreSQL database + Supabase Realtime subscription stream
-- **Backend Gateway**: Node.js + Express API (`server/`) serving API proxies and local storage fallback
+Welcome to the **Juby Club** official repository. This project powers the daily operations, table management, café orders, staff payroll, and financial profit-sharing for **Juby Club Tarfaya** and **Juby Club Laayoune**.
 
 ---
 
-## Directory Structure
+## 🌟 Quick Start — Standalone Web Application (`index.html`)
+
+The repository includes the standalone, self-contained **Juby Club Manager** (`index.html`), which runs entirely in the browser with local storage persistence and optional Firebase cloud synchronization.
+
+### Running Locally
+To launch the application locally:
+```bash
+python3 -m http.server 8080
+```
+Then navigate in your browser to:
+👉 **`http://localhost:8080/index.html`**
+
+---
+
+## 🏢 Multi-Branch Architecture
+
+The application provides a branch selection screen allowing administrators and managers to access their specific club branch with complete data isolation:
+
+1. **Juby Club Tarfaya**
+   - Operational since 2024
+   - 2-partner profit sharing and cash settlement engine
+   - Owner PIN: `1342` · Manager PIN: `0000`
+2. **Juby Club Laayoune**
+   - 3-stakeholder partnership structure
+   - Dedicated expense responsibility and profit distribution engine
+   - Owner PIN: `1234` · Manager PIN: `0000`
+
+---
+
+## 🤝 Juby Club Laayoune — Partnership & Financial Management
+
+Juby Club Laayoune operates under a specialized 3-stakeholder ownership structure:
+
+| Stakeholder | Ownership Stake | Shared Operating Expenses | Partners-Only Expenses |
+| :--- | :---: | :---: | :---: |
+| **👑 Investor** | **25.0%** | **25.0%** | **0.00 DH (100% EXCLUDED)** |
+| **👑 Partner 1 (Me)** | **37.5%** | **37.5%** | **50.0%** |
+| **👑 Partner 2 (Business Partner)** | **37.5%** | **37.5%** | **50.0%** |
+
+### Accounting Logic & Net Profit Formulas
+The investor receives 25% of business profits after deducting only shared business expenses. **Expenses concerning only the partners never reduce the investor's profit share:**
+
+$$\text{Investor Net Profit} = (\text{Total Revenue} - \text{Shared Business Expenses}) \times 25\%$$
+
+$$\text{Partner 1 Net Profit} = [(\text{Total Revenue} - \text{Shared Business Expenses}) \times 37.5\%] - (\text{Partners-Only Expenses} \times 50\%)$$
+
+$$\text{Partner 2 Net Profit} = [(\text{Total Revenue} - \text{Shared Business Expenses}) \times 37.5\%] - (\text{Partners-Only Expenses} \times 50\%)$$
+
+$$\text{Total Distributed Profits} = \text{Investor Net} + \text{Partner 1 Net} + \text{Partner 2 Net} = \text{Total Revenue} - \text{Total Expenses}$$
+
+### Verified Test Benchmark (Section 9 Specification)
+- **Revenue**: 100,000 DH
+- **Shared Expenses**: 20,000 DH
+- **Partners-Only Expenses**: 10,000 DH
 
 ```text
-Juby Club Modern/
-├── client/                 # Frontend application (React + Vite)
-│   ├── src/
-│   │   ├── core/           # Store, Supabase client, i18n, shared ledger utilities
-│   │   ├── features/       # Modular domain features (tables, sessions, customers, shifts, staff)
-│   │   ├── hooks/          # Custom React hooks (useTranslation)
-│   │   └── layouts/        # Dashboard layout, header & navigation components
-│   ├── .env.example        # Client environment variables template
-│   └── package.json
-│
-├── server/                 # Express API server (Node.js)
-│   ├── index.js            # Express API entrypoint (SMS & Telegram proxy handlers)
-│   ├── seed-supabase.js    # Database seeding script for initial setup
-│   ├── .env.example        # Server environment variables template
-│   └── package.json
-│
-├── supabase/               # Database DDL Schemas & Migrations
-│   └── schema.sql          # Supabase SQL schema definitions, indexes, and RLS policies
-│
-├── package.json            # Root package.json for workspace orchestration
-└── README.md               # Getting started & architectural documentation
+Profit Before Partners-Only = 80,000 DH
+
+• Investor:
+  - Shared expense contribution: 5,000 DH (25%)
+  - Net Profit: 20,000 DH (Protected)
+
+• Partner 1:
+  - Shared expense contribution: 7,500 DH (37.5%)
+  - Partners-Only deduction: 5,000 DH (50%)
+  - Net Profit: 25,000 DH
+
+• Partner 2:
+  - Shared expense contribution: 7,500 DH (37.5%)
+  - Partners-Only deduction: 5,000 DH (50%)
+  - Net Profit: 25,000 DH
+
+Total Net Profit Distributed: 70,000 DH (✓ 100% Mathematically Balanced)
 ```
 
 ---
 
-## Getting Started
+## 💸 Expense Classification System
 
-### Prerequisites
-- **Node.js**: v18+
-- **npm**: v9+
-- **Supabase Account**: (Free or Pro tier)
+Every expense in Juby Club Laayoune is classified under a mandatory responsibility field:
 
-### 1. Database Setup
-1. Log into your Supabase Dashboard and create a new project.
-2. Open the **SQL Editor** in your Supabase project.
-3. Paste and run the contents of [supabase/schema.sql](file:///Users/swayah/Documents/Juby%20Club%20Modern/supabase/schema.sql) to set up all required tables (`staff`, `players`, `tables`, `games`, `payments`, `shifts`, `sms_templates`, `app_state`), indexes, and Row Level Security (RLS) policies.
+1. **👥 Shared Business (All Stakeholders)**:
+   - Operating expenses: Rent, Electricity, Water, Internet, Coffee Supplies, Sidi Ali Water, Enerys, Municipal Taxes, Maintenance.
+   - Cost split: 25% Investor / 37.5% Partner 1 / 37.5% Partner 2.
+2. **🤝 Partners-Only (Investor Excluded)**:
+   - Partner-specific costs: TV subscriptions, Tombola prizes, CPP expenses, partner equipment.
+   - Cost split: 0 DH Investor / 50% Partner 1 / 50% Partner 2.
+3. **⚙️ Custom Allocation**:
+   - Custom percentage breakdown per stakeholder with real-time validation (total must equal 100%).
+4. **Live Allocation Preview**:
+   - The expense creation modal renders a live preview in Moroccan Dirhams (DH) before saving.
 
-### 2. Environment Configuration
-Copy `.env.example` to `.env` in the `client/` directory:
+---
+
+## 📑 Transparency & Reports
+
+The partnership module provides three tabbed executive reports:
+
+- **Report C — Profit Distribution Statement**: Complete stakeholder breakdown with gross profit shares, partner deductions, final net profits, and category distribution.
+- **Report A — Shared Business Operating Expenses**: Itemized list of normal operating costs with 25% / 37.5% / 37.5% contributions.
+- **Report B — Partners-Only Expenses**: Itemized list of partner costs with Investor share fixed at **0.00 DH (EXCLUDED)**.
+- **🖨️ Printable Statements**: Generates print-ready formal statements complete with executive summary and stakeholder signature rows.
+
+---
+
+## 👥 Decoupled Staff Management & Local Mode
+
+- **Staff Payroll Decoupling**: Staff salaries, advances (تسبيقات), and worker attendance are managed exclusively in the **Staff page**, keeping the **Charges page** clean and focused on club operating bills.
+- **Default Local Mode**: The application defaults to **`💾 Local Mode (Offline)`** for immediate startup without internet latency. One-click toggle to **`☁️ Cloud Online`** is available on the login screen.
+
+---
+
+## 🚀 Modernized Fullstack Architecture (`client/` & `server/`)
+
+In addition to `index.html`, the repository includes a modernized React 19 + Node.js fullstack architecture:
+
+- **Frontend (`client/`)**: React 19, Vite, Zustand state management, Tailwind CSS.
+- **Backend (`server/`)**: Express API with SMS/Telegram notifications and Supabase database integration.
+- **Database (`supabase/`)**: PostgreSQL schema, Row Level Security policies, and real-time event streams.
+
+### Development Commands
 ```bash
-cp client/.env.example client/.env
-```
-Fill in your Supabase project credentials:
-```env
-VITE_API_BASE_URL=http://localhost:5005
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
-```
-
-### 3. Installation
-From the root workspace directory:
-```bash
+# Install dependencies
 npm run install:all
-```
 
-### 4. Running Development Servers
-Start both the React frontend (Vite) and Express backend concurrently:
-```bash
+# Run React frontend + Express backend
 npm run dev
 ```
 
-- **Frontend Application**: `http://localhost:5173/`
-- **Backend API Gateway**: `http://localhost:5005/`
+---
+
+## 🔒 Credentials & Roles
+
+| Branch | Role | Default PIN | Access Level |
+| :--- | :--- | :---: | :--- |
+| **Laayoune** | **Owner (المالك)** | **`1234`** | Full access: Partnership, Profits, Expenses, Staff, Settings |
+| **Laayoune** | **Manager (المسير)** | **`0000`** | Operations: Tables, Café, Shifts, Attendance |
+| **Tarfaya** | **Owner (المالك)** | **`1342`** | Full access: Tarfaya Partner Settlement & Accounts |
+| **Tarfaya** | **Manager (المسير)** | **`0000`** | Operations: Tables, Café, Shifts, Attendance |
+
+*(PINs can be updated anytime in the Settings page).*
 
 ---
 
-## Verification & Health Status
+## 📄 License
 
-| Check | Tool | Result |
-| :--- | :--- | :--- |
-| **ESLint Check** | `npm run lint` | **0 errors, 0 warnings (100% Clean)** |
-| **Production Build** | `npm run build` | **Passed cleanly in 147ms** |
-| **Backend Integration** | `@supabase/supabase-js` | **Realtime subscriptions & cloud persistence active** |
-| **Firebase References** | Grep Audit | **0 references (100% Purged)** |
-
----
-
-## License
-
-Private repository for Juby Club.
+Private repository for Juby Club (Tarfaya & Laayoune).
