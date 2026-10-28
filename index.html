@@ -2660,6 +2660,11 @@
         <div class="card-title" data-en="Data" data-ar="البيانات">Data</div>
       </div>
       <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 14px;" data-en="Your data is saved automatically and persists across sessions." data-ar="بياناتك تحفظ تلقائيا وتبقى محفوظة عبر الجلسات.">Your data is saved automatically and persists across sessions.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <button class="btn btn-primary" id="restoreCloudBtn" onclick="restoreCurrentBranchFromCloud()" style="background:var(--cyan);border-color:var(--cyan);color:#0d1117;font-weight:700">
+          ☁️ <span data-en="Restore All Data from Firebase" data-ar="استرجاع جميع البيانات من سحابة فايربيس">Restore All Data from Firebase</span>
+        </button>
+      </div>
       <button class="btn btn-danger" onclick="resetData()">
         🗑️ <span data-en="Reset All Data" data-ar="حذف جميع البيانات">Reset All Data</span>
       </button>
@@ -4728,11 +4733,44 @@ async function loadData() {
   }
   // LOCAL MODE
   try {
-    const result = await universalStorage.get(getStoreKey());
+    const primaryKey = getStoreKey();
+    let result = await universalStorage.get(primaryKey);
+    let hasShifts = false;
+
     if (result && result.value) {
-      const parsed = JSON.parse(result.value);
-      state = { ...state, ...parsed };
-      migrateState();
+      try {
+        const parsed = JSON.parse(result.value);
+        if (parsed && Array.isArray(parsed.shifts) && parsed.shifts.length > 0) {
+          state = { ...state, ...parsed };
+          migrateState();
+          hasShifts = true;
+        }
+      } catch(e){}
+    }
+
+    // 1. Check legacy local storage key (for Tarfaya migration from original club_manager_v1)
+    if (!hasShifts && (currentBranchId === 'tarfaya' || !currentBranchId)) {
+      const legacyResult = await universalStorage.get('club_manager_v1');
+      if (legacyResult && legacyResult.value) {
+        try {
+          const parsed = JSON.parse(legacyResult.value);
+          if (parsed && Array.isArray(parsed.shifts) && parsed.shifts.length > 0) {
+            state = { ...state, ...parsed };
+            migrateState();
+            hasShifts = true;
+            try { await universalStorage.set(primaryKey, JSON.stringify(state)); } catch(e){}
+          }
+        } catch(e){}
+      }
+    }
+
+    // 2. If local store is still empty, automatically pull from Firebase cloud so no data is ever lost!
+    if (!hasShifts) {
+      console.log('No local data for ' + currentBranchId + ', pulling from Firebase cloud to seed...');
+      const cloudSuccess = await loadDataFromCloud();
+      if (cloudSuccess && state.shifts && state.shifts.length > 0) {
+        try { await universalStorage.set(primaryKey, JSON.stringify(state)); } catch(e){}
+      }
     }
   } catch (e) {
     console.warn('Local load error:', e);
@@ -4816,12 +4854,14 @@ async function loadDataFromCloud() {
 
   try {
     let data = await rtdbGet(cfg.dbPath);
-    if (!data && cfg.legacyPath) {
-      data = await rtdbGet(cfg.legacyPath);
-      if (data) {
+    // If data is missing or shifts are empty, check legacy path (clubs/jubyclub)
+    if ((!data || !data.shifts || data.shifts.length === 0) && cfg.legacyPath) {
+      const legacyData = await rtdbGet(cfg.legacyPath);
+      if (legacyData && legacyData.shifts && legacyData.shifts.length > 0) {
+        data = legacyData;
         data.settings = data.settings || {};
         if (!data.settings.clubName) data.settings.clubName = cfg.name.en;
-        await rtdbSet(cfg.dbPath, data);
+        try { await rtdbSet(cfg.dbPath, data); } catch(e){}
       }
     }
 
@@ -11093,6 +11133,31 @@ async function resetPartnerShares() {
   await saveData();
   renderPartnerSharesSettings();
   alert(t('saved'));
+}
+
+
+async function restoreCurrentBranchFromCloud() {
+  const ar = (lang === 'ar');
+  const branchName = (currentBranchId === 'tarfaya') ? 'Juby Club Tarfaya' : 'Juby Club Laayoune';
+  if (!confirm(ar ? ('هل تريد جلب واسترجاع جميع بيانات ' + branchName + ' من سحابة Firebase؟') : ('Restore all data for ' + branchName + ' directly from Firebase Cloud?'))) return;
+
+  const btn = document.getElementById('restoreCloudBtn');
+  if (btn) btn.disabled = true;
+
+  try {
+    const loaded = await loadDataFromCloud();
+    if (loaded && state.shifts && state.shifts.length > 0) {
+      try { await universalStorage.set(getStoreKey(), JSON.stringify(state)); } catch(e){}
+      renderAll();
+      alert(ar ? ('✓ تم استرجاع ' + state.shifts.length + ' وردية و ' + state.staff.length + ' موظف بنجاح من السحابة!') : ('✓ Successfully restored ' + state.shifts.length + ' shifts and ' + state.staff.length + ' staff from Cloud!'));
+    } else {
+      alert(ar ? 'لم يتم العثور على ورديات جديدة في السحابة لهذا الفرع' : 'No shifts found in cloud for this branch');
+    }
+  } catch(e) {
+    alert((ar ? 'فشل: ' : 'Failed: ') + e.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 /* ============== INIT ============== */
