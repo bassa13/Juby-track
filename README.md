@@ -135,13 +135,53 @@ npm run dev
 
 ---
 
+---
+
+## 📱 Independent Telegram Notifications & Prominent Club Identification
+
+Both branches have isolated Telegram bot configurations and independent notification destinations:
+
+- **Prominent Club Identification**: Every notification starts prominently with the club name:
+  ```text
+  🔔 <b>JUBY CLUB LAAYOUNE</b>
+  Club: JUBY CLUB LAAYOUNE
+  ━━━━━━━━━━━━━━━━
+  ```
+  or:
+  ```text
+  🔔 <b>JUBY CLUB TARFAYA</b>
+  Club: JUBY CLUB TARFAYA
+  ━━━━━━━━━━━━━━━━
+  ```
+  Searching for `TARFAYA` or `LAAYOUNE` in Telegram search immediately surfaces all notifications for that specific club.
+- **Delivery Verification**: Notifications are verified via the Telegram Bot API (`result.ok === true`) with masked, secure server and console logging.
+- **Admin Test Notification**: Built-in test button in **Settings ➔ Telegram Notifications** to verify delivery with real-time feedback.
+
+---
+
+## 🕵️ Complete Change History & Audit Trail
+
+A secure, append-only modification history tracks all critical data updates across the club:
+
+- **Tracked Entities**:
+  - Financial amounts & expense descriptions (e.g. `400 DH` ➔ `480 DH`, `Coffee supplies` ➔ `Coffee and drinks supplies`).
+  - Shift receipts (tables, café, staff).
+  - Staff profiles, base salaries, advances, and payments.
+  - Credit and old debt repayments.
+  - Club settings (currency, name, PINs, Telegram destinations).
+- **Audit Detail**: Every audit log record preserves the entity type, ID, reference, field modified, previous value (`oldValue`), new value (`newValue`), exact timestamp, active user identity (`Owner 👑` / `Manager`), and club name.
+- **Audit Trail UI**: An interactive page (`#page-audit`) with search filtering, club filtering, category filtering, visual diff badges (`old ➔ new`), and CSV export for financial audits.
+- **Access Control**: Audit trail is accessible exclusively to the **Owner (👑)**.
+
+---
+
 ## 🔒 Credentials & Roles
 
 | Branch | Role | Default PIN | Access Level |
 | :--- | :--- | :---: | :--- |
-| **Laayoune** | **Owner (المالك)** | **`1234`** | Full access: Partnership, Profits, Expenses, Staff, Settings |
+| **Laayoune** | **Owner (المالك)** | **`1234`** | Full access: Partnership, Profits, Expenses, Staff, Settings, Audit Trail |
 | **Laayoune** | **Manager (المسير)** | **`0000`** | Operations: Tables, Café, Shifts, Attendance |
-| **Tarfaya** | **Owner (المالك)** | **`1342`** | Full access: Tarfaya Partner Settlement & Accounts |
+| **Tarfaya** | **Owner (المالك)** | **`1342`** | Full access: Tarfaya Partner Settlement & Accounts, Audit Trail |
 | **Tarfaya** | **Manager (المسير)** | **`0000`** | Operations: Tables, Café, Shifts, Attendance |
 
 *(PINs can be updated anytime in the Settings page).*

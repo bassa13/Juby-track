@@ -1057,6 +1057,81 @@
   }
   body[dir="rtl"] .branch-pill-switch { margin-left: 0; margin-right: 4px; }
 
+  /* ===== AUDIT TRAIL & CHANGE HISTORY STYLES ===== */
+  .audit-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .audit-badge.tarfaya {
+    background: rgba(46, 160, 67, 0.15);
+    color: var(--green);
+    border: 1px solid rgba(46, 160, 67, 0.35);
+  }
+  .audit-badge.laayoune {
+    background: rgba(88, 166, 255, 0.15);
+    color: var(--cyan);
+    border: 1px solid rgba(88, 166, 255, 0.35);
+  }
+  .audit-pill-old {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 5px;
+    background: rgba(248, 81, 73, 0.15);
+    color: #f85149;
+    font-weight: 600;
+    text-decoration: line-through;
+    border: 1px solid rgba(248, 81, 73, 0.35);
+    font-family: monospace;
+    font-size: 12px;
+  }
+  .audit-pill-new {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 5px;
+    background: rgba(46, 160, 67, 0.15);
+    color: #3fb950;
+    font-weight: 700;
+    border: 1px solid rgba(46, 160, 67, 0.35);
+    font-family: monospace;
+    font-size: 12px;
+  }
+  .audit-arrow {
+    display: inline-block;
+    margin: 0 6px;
+    color: var(--text-dim);
+    font-weight: bold;
+    font-size: 13px;
+  }
+  .audit-action-tag {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .audit-action-edit {
+    background: rgba(212, 165, 68, 0.15);
+    color: var(--gold);
+    border: 1px solid rgba(212, 165, 68, 0.3);
+  }
+  .audit-action-delete {
+    background: rgba(248, 81, 73, 0.15);
+    color: #f85149;
+    border: 1px solid rgba(248, 81, 73, 0.3);
+  }
+  .audit-action-create {
+    background: rgba(88, 166, 255, 0.15);
+    color: var(--cyan);
+    border: 1px solid rgba(88, 166, 255, 0.3);
+  }
 
   /* ===== LAAYOUNE PARTNERSHIP STYLES ===== */
   .stakeholder-grid {
@@ -1574,6 +1649,7 @@
     <button class="owner-only" onclick="showPage('credits', this)" data-en="Credit" data-ar="السلف">💰 <span data-en="Credit" data-ar="السلف">Credit</span> <span id="navCreditBadge" style="display:none;background:var(--gold);color:#0d1117;border-radius:10px;padding:1px 7px;font-size:10px;margin-left:4px;font-weight:700">0</span></button>
     <button class="owner-only" onclick="showPage('reports', this)" data-en="Reports" data-ar="التقارير">Reports</button>
     <button class="owner-only" onclick="showPage('partners', this)" data-en="🤝 Partners" data-ar="🤝 الشركاء">🤝 Partners</button>
+    <button class="owner-only" id="auditNavBtn" onclick="showPage('audit', this)" data-en="📜 Audit History" data-ar="📜 سجل التعديلات">📜 Audit History</button>
     <button class="owner-only" onclick="showPage('settings', this)" data-en="Settings" data-ar="الإعدادات">Settings</button>
     <button class="owner-only" id="debtsNavBtn" onclick="openDebtsGate(this)" data-en="🔒 Old Debts" data-ar="🔒 ديون قديمة">🔒 Old Debts</button>
   </div>
@@ -2251,6 +2327,75 @@
     </div> <!-- Close tarfayaPartnersWrap -->
   </div>
 
+  <!-- ===== AUDIT HISTORY ===== -->
+  <div class="page" id="page-audit">
+    <div class="card">
+      <div class="card-header" style="flex-wrap:wrap;gap:12px">
+        <div>
+          <div class="card-title">📜 <span data-en="Change History &amp; Audit Trail" data-ar="سجل التعديلات وتتبع التغييرات">Change History &amp; Audit Trail</span></div>
+          <div class="card-subtitle" data-en="Track all record edits, old vs new values, users, and modification timestamps" data-ar="تتبع جميع التعديلات، القيم السابقة والجديدة، المستخدمين وتواريخ التعديل">Track all record edits, old vs new values, users, and modification timestamps</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <span id="auditCountBadge" class="badge" style="background:var(--gold);color:#0d1117;font-weight:700;padding:4px 10px;border-radius:12px;font-size:12px">0 Changes</span>
+          <button class="btn btn-sm" onclick="exportAuditLogToCSV()">📥 <span data-en="Export CSV" data-ar="تصدير CSV">Export CSV</span></button>
+          <button class="btn btn-sm" onclick="renderAuditLog()">🔄 <span data-en="Refresh" data-ar="تحديث">Refresh</span></button>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:10px;margin-bottom:18px;background:var(--bg-elevated);padding:14px;border-radius:10px;border:1px solid var(--border)">
+        <div class="form-group" style="margin-bottom:0">
+          <label style="font-size:11px" data-en="Search records, fields, or users" data-ar="بحث في السجلات أو المستخدمين">Search</label>
+          <input type="text" id="auditSearchInput" placeholder="Search... / بحث..." oninput="renderAuditLog()" style="padding:6px 10px;font-size:12px">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label style="font-size:11px" data-en="Club / Branch" data-ar="النادي / الفرع">Club</label>
+          <select id="auditClubFilter" onchange="renderAuditLog()" style="padding:6px 10px;font-size:12px">
+            <option value="current" data-en="Current Club Only" data-ar="النادي الحالي فقط">Current Club Only</option>
+            <option value="all" data-en="All Clubs (Global)" data-ar="كل الأندية">All Clubs (Global)</option>
+            <option value="tarfaya">JUBY CLUB TARFAYA</option>
+            <option value="laayoune">JUBY CLUB LAAYOUNE</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label style="font-size:11px" data-en="Record Type" data-ar="نوع السجل">Record Type</label>
+          <select id="auditTypeFilter" onchange="renderAuditLog()" style="padding:6px 10px;font-size:12px">
+            <option value="all" data-en="All Types" data-ar="الكل">All Types</option>
+            <option value="Expense" data-en="Expenses" data-ar="المصاريف">Expenses</option>
+            <option value="Shift" data-en="Shifts (Revenues)" data-ar="الورديات">Shifts</option>
+            <option value="Staff" data-en="Staff & Salaries" data-ar="الموظفون">Staff & Salaries</option>
+            <option value="Advance" data-en="Advances" data-ar="التسبيقات">Advances</option>
+            <option value="Salary Payment" data-en="Salary Payments" data-ar="خلاص الرواتب">Salary Payments</option>
+            <option value="Credit" data-en="Credits" data-ar="السلف">Credits</option>
+            <option value="Debt" data-en="Old Debts" data-ar="ديون قديمة">Old Debts</option>
+            <option value="Reminder" data-en="Reminders" data-ar="التذكيرات">Reminders</option>
+            <option value="Settings" data-en="Settings / PINs" data-ar="الإعدادات">Settings</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrap">
+        <table id="auditTable">
+          <thead>
+            <tr>
+              <th data-en="Date &amp; Time" data-ar="الوقت والتاريخ">Date &amp; Time</th>
+              <th data-en="Club" data-ar="النادي">Club</th>
+              <th data-en="User" data-ar="المستخدم">User</th>
+              <th data-en="Record / Reference" data-ar="السجل">Record / Reference</th>
+              <th data-en="Field" data-ar="الحقل">Field</th>
+              <th data-en="Previous Value" data-ar="القيمة السابقة">Previous Value</th>
+              <th data-en="New Value" data-ar="القيمة الجديدة">New Value</th>
+              <th data-en="Change Diff" data-ar="التغيير">Change Diff</th>
+            </tr>
+          </thead>
+          <tbody id="auditTableBody"></tbody>
+        </table>
+      </div>
+      <div id="auditEmptyState" style="text-align:center;padding:40px;color:var(--text-dim);display:none" data-en="No modifications found matching filters" data-ar="لا توجد تعديلات تطابق هذا البحث">No modifications found</div>
+    </div>
+  </div>
+
   <!-- ===== SETTINGS ===== -->
   <div class="page" id="page-settings">
     <div class="card">
@@ -2321,8 +2466,11 @@
     <div class="card">
       <div class="card-header">
         <div>
-          <div class="card-title" data-en="📱 Telegram Notifications" data-ar="📱 إشعارات تيليجرام">📱 Telegram Notifications</div>
-          <div class="card-subtitle" data-en="Get daily reports and reminders sent to your Telegram" data-ar="استقبل التقارير اليومية والتذكيرات في تيليجرام">Get daily reports and reminders sent to your Telegram</div>
+          <div class="card-title" data-en="📱 Telegram Notifications &amp; Alerts" data-ar="📱 إشعارات وتنبيهات تيليجرام">📱 Telegram Notifications &amp; Alerts</div>
+          <div class="card-subtitle" data-en="Independent Telegram destination &amp; delivery per club" data-ar="وجهة وإرسال تيليجرام مستقل لكل نادٍ">Independent Telegram destination &amp; delivery per club</div>
+        </div>
+        <div>
+          <span class="audit-badge" id="telegramBranchBadge" style="font-size:12px;padding:4px 10px">JUBY CLUB</span>
         </div>
       </div>
 
@@ -3437,6 +3585,16 @@ const clientSessionId = (Date.now().toString(36) + Math.random().toString(36).sl
 
 function getBranchConfig(id) {
   return BRANCHES[id] || BRANCHES.tarfaya;
+}
+
+const EXACT_CLUB_NAMES = {
+  tarfaya: 'JUBY CLUB TARFAYA',
+  laayoune: 'JUBY CLUB LAAYOUNE'
+};
+
+function getExactClubName(branchId) {
+  const b = branchId || currentBranchId || (typeof localStorage !== 'undefined' ? localStorage.getItem('club_selected_branch') : null) || 'tarfaya';
+  return EXACT_CLUB_NAMES[b] || (b === 'laayoune' ? 'JUBY CLUB LAAYOUNE' : 'JUBY CLUB TARFAYA');
 }
 
 function updateHeaderBranch() {
@@ -4790,6 +4948,7 @@ function migrateState() {
   if (!state.bonuses) state.bonuses = [];
   if (!state.payments) state.payments = [];
   if (!state.debts) state.debts = [];
+  if (!state.auditLog || !Array.isArray(state.auditLog)) state.auditLog = [];
   // Old charges had no type → treat them as normal one-time charges
   if (Array.isArray(state.charges)) {
     state.charges.forEach(c => { if (!c.type) c.type = 'normal'; });
@@ -4816,9 +4975,13 @@ function migrateState() {
   if (!state.settings.managerPin) state.settings.managerPin = '0000';
   if (!state.settings.currency) state.settings.currency = 'DH';
   if (state.settings.debtsPin === undefined) state.settings.debtsPin = (branch === 'tarfaya' ? '134213' : '');
-  if (state.settings.telegramToken === undefined) state.settings.telegramToken = '';
-  if (state.settings.telegramChatId === undefined) state.settings.telegramChatId = '';
-  if (state.settings.telegramAutoDaily === undefined) state.settings.telegramAutoDaily = false;
+  if (!state.settings.telegramToken) {
+    state.settings.telegramToken = (typeof DEFAULT_TELEGRAM_BOT_TOKEN !== 'undefined') ? DEFAULT_TELEGRAM_BOT_TOKEN : '8601591650:AAFwrRBtiOUBcOku5OD5Iayvsq_rGYR73Qg';
+  }
+  if (!state.settings.telegramChatId) {
+    state.settings.telegramChatId = '516754204';
+  }
+  if (state.settings.telegramAutoDaily === undefined) state.settings.telegramAutoDaily = true;
   if (state.settings.telegramLoginAlerts === undefined) state.settings.telegramLoginAlerts = true;
   if (state.settings.telegramEditAlerts === undefined) state.settings.telegramEditAlerts = true;
   if (state.settings.ownerNfcId === undefined) state.settings.ownerNfcId = '';
@@ -4876,6 +5039,7 @@ async function loadDataFromCloud() {
       state.bonuses = data.bonuses || [];
       state.payments = data.payments || [];
       state.debts = data.debts || [];
+      state.auditLog = (data.auditLog && Array.isArray(data.auditLog)) ? data.auditLog : (data.auditLog ? Object.values(data.auditLog) : []);
       state.settings = data.settings || state.settings;
       if (!state.settings.clubName) state.settings.clubName = cfg.name[lang] || cfg.name.en;
       migrateState();
@@ -4884,14 +5048,14 @@ async function loadDataFromCloud() {
       // Clean initialization for new branch
       state = {
         shifts: [], staff: [], advances: [], charges: [], absences: [],
-        reminders: [], credits: [], bonuses: [], payments: [], debts: [],
+        reminders: [], credits: [], bonuses: [], payments: [], debts: [], auditLog: [],
         settings: {
           clubName: cfg.name[lang] || cfg.name.en,
           currency: 'DH',
           ownerPin: (currentBranchId === 'tarfaya' ? '1342' : '1234'),
           managerPin: '0000',
           debtsPin: (currentBranchId === 'tarfaya' ? '134213' : ''),
-          telegramToken: '', telegramChatId: '', telegramAutoDaily: false,
+          telegramToken: DEFAULT_TELEGRAM_BOT_TOKEN, telegramChatId: '516754204', telegramAutoDaily: true,
           telegramLoginAlerts: true, telegramEditAlerts: true,
           ownerNfcId: '', managerNfcId: '', partnerShares: {},
           sheetUrl: '', sheetAutoSync: false, sheetSyncInterval: 60, sheetLastSync: ''
@@ -4924,6 +5088,7 @@ async function saveDataToCloud() {
       bonuses: state.bonuses,
       payments: state.payments,
       debts: state.debts,
+      auditLog: state.auditLog || [],
       settings: state.settings,
       updatedAt: new Date().toISOString(),
       updatedBy: currentRole + '_' + clientSessionId
@@ -4975,6 +5140,13 @@ async function pollForUpdates() {
         state.charges = data.charges || [];
         state.absences = data.absences || [];
         state.reminders = data.reminders || [];
+        state.credits = data.credits || [];
+        state.bonuses = data.bonuses || [];
+        state.payments = data.payments || [];
+        state.debts = data.debts || [];
+        if (data.auditLog) {
+          state.auditLog = Array.isArray(data.auditLog) ? data.auditLog : Object.values(data.auditLog);
+        }
         state.credits = data.credits || [];
         state.bonuses = data.bonuses || [];
         state.payments = data.payments || [];
@@ -5271,12 +5443,13 @@ function localStorage_safe_set(k, v) { try { localStorage.setItem(k, v); } catch
 /* ============== NAV ============== */
 function showPage(name, btn) {
   // Security: block owner-only pages from manager
-  const ownerOnlyPages = ['reports', 'settings', 'reminders', 'credits', 'debts', 'partners'];
+  const ownerOnlyPages = ['reports', 'settings', 'reminders', 'credits', 'debts', 'partners', 'audit'];
   if (currentRole === 'manager' && ownerOnlyPages.includes(name)) {
     return; // silent block
   }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-' + name).classList.add('active');
+  const targetPage = document.getElementById('page-' + name);
+  if (targetPage) targetPage.classList.add('active');
   document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   if (name === 'dashboard') renderDashboard();
@@ -5287,6 +5460,7 @@ function showPage(name, btn) {
   if (name === 'reminders') renderReminders();
   if (name === 'credits') renderCredits();
   if (name === 'reports') renderReport();
+  if (name === 'audit') renderAuditLog();
   if (name === 'settings') renderSettings();
   if (name === 'debts') renderDebts();
   if (name === 'partners') renderPartners();
@@ -5886,6 +6060,45 @@ async function saveSingleShift(period) {
     return;
   }
 
+  // Audit trail comparison
+  const oldShift = state.shifts.find(s => s.date === date && s.period === period);
+  if (oldShift) {
+    const shiftRef = `Shift: ${date} (${period})`;
+    if (+oldShift.tables !== +T) {
+      recordAuditEntry({
+        entityType: 'Shift',
+        entityId: oldShift.id,
+        entityRef: shiftRef,
+        field: 'Tables Revenue',
+        oldValue: `${fmt(oldShift.tables)} DH`,
+        newValue: `${fmt(T)} DH`,
+        action: 'edit'
+      });
+    }
+    if (+oldShift.cafe !== +C) {
+      recordAuditEntry({
+        entityType: 'Shift',
+        entityId: oldShift.id,
+        entityRef: shiftRef,
+        field: 'Café Revenue',
+        oldValue: `${fmt(oldShift.cafe)} DH`,
+        newValue: `${fmt(C)} DH`,
+        action: 'edit'
+      });
+    }
+    if (oldShift.staffId !== Sv) {
+      recordAuditEntry({
+        entityType: 'Shift',
+        entityId: oldShift.id,
+        entityRef: shiftRef,
+        field: 'Staff Member',
+        oldValue: staffNameById(oldShift.staffId),
+        newValue: staffNameById(Sv),
+        action: 'edit'
+      });
+    }
+  }
+
   // Replace ONLY this shift for this date — keep the other shifts intact
   state.shifts = state.shifts.filter(s => !(s.date === date && s.period === period));
   state.shifts.push({ id: uid(), date, period, tables: T, cafe: C, staffId: Sv });
@@ -5918,6 +6131,55 @@ async function saveShift() {
     alert(lang === 'ar' ? 'لم تدخل أي مداخيل' : 'No revenue entered');
     return;
   }
+
+  // Audit trail comparison for bulk shifts
+  const shiftInputs = [
+    { period: 'morning', tables: mT, cafe: mC, staff: mS },
+    { period: 'evening', tables: eT, cafe: eC, staff: eS },
+    { period: 'latenight', tables: lnT, cafe: lnC, staff: lnS }
+  ];
+
+  shiftInputs.forEach(inp => {
+    if (inp.tables > 0 || inp.cafe > 0) {
+      const old = state.shifts.find(s => s.date === date && s.period === inp.period);
+      if (old) {
+        const ref = `Shift: ${date} (${inp.period})`;
+        if (+old.tables !== +inp.tables) {
+          recordAuditEntry({
+            entityType: 'Shift',
+            entityId: old.id,
+            entityRef: ref,
+            field: 'Tables Revenue',
+            oldValue: `${fmt(old.tables)} DH`,
+            newValue: `${fmt(inp.tables)} DH`,
+            action: 'edit'
+          });
+        }
+        if (+old.cafe !== +inp.cafe) {
+          recordAuditEntry({
+            entityType: 'Shift',
+            entityId: old.id,
+            entityRef: ref,
+            field: 'Café Revenue',
+            oldValue: `${fmt(old.cafe)} DH`,
+            newValue: `${fmt(inp.cafe)} DH`,
+            action: 'edit'
+          });
+        }
+        if (old.staffId !== inp.staff) {
+          recordAuditEntry({
+            entityType: 'Shift',
+            entityId: old.id,
+            entityRef: ref,
+            field: 'Staff Member',
+            oldValue: staffNameById(old.staffId),
+            newValue: staffNameById(inp.staff),
+            action: 'edit'
+          });
+        }
+      }
+    }
+  });
 
   // Only replace the shifts the user actually filled in this time.
   // A shift left blank keeps whatever was already saved for that date.
@@ -6011,7 +6273,18 @@ async function deleteShift(id) {
   await saveData();
   renderAllShifts();
   renderDashboard();
-  if (sh) notifyEdit(`🗑️ حذف وردية ${sh.date} (${(+sh.tables||0)+(+sh.cafe||0)} درهم)`, `🗑️ Deleted shift ${sh.date} (${(+sh.tables||0)+(+sh.cafe||0)} DH)`);
+  if (sh) {
+    recordAuditEntry({
+      entityType: 'Shift',
+      entityId: sh.id,
+      entityRef: `Shift: ${sh.date} (${sh.period})`,
+      field: 'Record Status',
+      oldValue: `Tables: ${fmt(sh.tables)} DH, Café: ${fmt(sh.cafe)} DH`,
+      newValue: 'DELETED',
+      action: 'delete'
+    });
+    notifyEdit(`🗑️ حذف وردية ${sh.date} (${(+sh.tables||0)+(+sh.cafe||0)} درهم)`, `🗑️ Deleted shift ${sh.date} (${(+sh.tables||0)+(+sh.cafe||0)} DH)`);
+  }
 }
 
 /* ============== STAFF ============== */
@@ -6273,6 +6546,21 @@ async function saveStaff() {
     // Manager cannot change salary: keep the existing value
     const salary = isManager ? (+s.salary || 0) : +document.getElementById('staffSalary').value;
     if (!name || (!isManager && !salary)) { alert(t('fillRequired')); return; }
+
+    const staffRef = `Staff: ${s.name}`;
+    if (s.name !== name) {
+      recordAuditEntry({ entityType: 'Staff', entityId: s.id, entityRef: staffRef, field: 'Name', oldValue: s.name, newValue: name, action: 'edit' });
+    }
+    if (+s.salary !== +salary) {
+      recordAuditEntry({ entityType: 'Staff', entityId: s.id, entityRef: staffRef, field: 'Salary', oldValue: `${fmt(s.salary)} DH`, newValue: `${fmt(salary)} DH`, action: 'edit' });
+    }
+    if (s.role !== role) {
+      recordAuditEntry({ entityType: 'Staff', entityId: s.id, entityRef: staffRef, field: 'Role', oldValue: s.role, newValue: role, action: 'edit' });
+    }
+    if (!!s.isInactive !== !!isInactive) {
+      recordAuditEntry({ entityType: 'Staff', entityId: s.id, entityRef: staffRef, field: 'Status', oldValue: s.isInactive ? 'Inactive' : 'Active', newValue: isInactive ? 'Inactive' : 'Active', action: 'edit' });
+    }
+
     s.name = name; s.role = role; s.type = type; s.salary = salary; s.isOwner = isOwner; s.isInactive = isInactive;
   } else {
     // Manager adding new staff: salary defaults to 0, owner sets it later
@@ -6299,7 +6587,18 @@ async function deleteStaff(id) {
   await saveData();
   renderStaff();
   fillStaffSelects();
-  if (st) notifyEdit(`🗑️ حذف موظف: ${st.name}`, `🗑️ Deleted staff: ${st.name}`);
+  if (st) {
+    recordAuditEntry({
+      entityType: 'Staff',
+      entityId: st.id,
+      entityRef: `Staff: ${st.name} (${st.role})`,
+      field: 'Record Status',
+      oldValue: `${st.name} - ${fmt(st.salary)} DH`,
+      newValue: 'DELETED',
+      action: 'delete'
+    });
+    notifyEdit(`🗑️ حذف موظف: ${st.name}`, `🗑️ Deleted staff: ${st.name}`);
+  }
 }
 
 let editingAdvanceId = null;
@@ -6337,7 +6636,20 @@ async function saveAdvance() {
   if (!amount || !date) { alert(t('fillCharge')); return; }
   if (editingAdvanceId) {
     const a = state.advances.find(x => x.id === editingAdvanceId);
-    if (a) { a.date = date; a.amount = amount; a.note = note; }
+    if (a) {
+      const staffName = staffNameById(a.staffId || currentAdvanceStaffId);
+      const advRef = `Advance: ${staffName} (${a.date})`;
+      if (+a.amount !== +amount) {
+        recordAuditEntry({ entityType: 'Advance', entityId: a.id, entityRef: advRef, field: 'Amount', oldValue: `${fmt(a.amount)} DH`, newValue: `${fmt(amount)} DH`, action: 'edit' });
+      }
+      if (a.date !== date) {
+        recordAuditEntry({ entityType: 'Advance', entityId: a.id, entityRef: advRef, field: 'Date', oldValue: a.date, newValue: date, action: 'edit' });
+      }
+      if ((a.note || '') !== (note || '')) {
+        recordAuditEntry({ entityType: 'Advance', entityId: a.id, entityRef: advRef, field: 'Note', oldValue: a.note || '—', newValue: note || '—', action: 'edit' });
+      }
+      a.date = date; a.amount = amount; a.note = note;
+    }
   } else {
     state.advances.push({ id: uid(), staffId: currentAdvanceStaffId, date, amount, note });
   }
@@ -6355,7 +6667,19 @@ async function deleteAdvance(id) {
   await saveData();
   renderStaff();
   renderDashboard();
-  if (adv) notifyEdit(`🗑️ حذف تسبيق: ${fmt(adv.amount)} درهم`, `🗑️ Deleted advance: ${fmt(adv.amount)} DH`);
+  if (adv) {
+    const staffName = staffNameById(adv.staffId);
+    recordAuditEntry({
+      entityType: 'Advance',
+      entityId: adv.id,
+      entityRef: `Advance: ${staffName} (${adv.date})`,
+      field: 'Record Status',
+      oldValue: `${fmt(adv.amount)} DH`,
+      newValue: 'DELETED',
+      action: 'delete'
+    });
+    notifyEdit(`🗑️ حذف تسبيق: ${fmt(adv.amount)} درهم`, `🗑️ Deleted advance: ${fmt(adv.amount)} DH`);
+  }
 }
 
 /* ============== SALARY PAYMENTS (cash basis) ============== */
@@ -6507,7 +6831,20 @@ async function saveSalaryPayment() {
   if (!amount || amount <= 0 || !date) { alert(t('fillCharge')); return; }
   if (editingPaymentId) {
     const p = (state.payments || []).find(x => x.id === editingPaymentId);
-    if (p) { p.date = date; p.amount = amount; p.note = note; p.forMonth = monthOf(date); }
+    if (p) {
+      const staffName = staffNameById(p.staffId || currentPayStaffId);
+      const payRef = `Salary Payment: ${staffName} (${p.date})`;
+      if (+p.amount !== +amount) {
+        recordAuditEntry({ entityType: 'Payment', entityId: p.id, entityRef: payRef, field: 'Amount', oldValue: `${fmt(p.amount)} DH`, newValue: `${fmt(amount)} DH`, action: 'edit' });
+      }
+      if (p.date !== date) {
+        recordAuditEntry({ entityType: 'Payment', entityId: p.id, entityRef: payRef, field: 'Date', oldValue: p.date, newValue: date, action: 'edit' });
+      }
+      if ((p.note || '') !== (note || '')) {
+        recordAuditEntry({ entityType: 'Payment', entityId: p.id, entityRef: payRef, field: 'Note', oldValue: p.note || '—', newValue: note || '—', action: 'edit' });
+      }
+      p.date = date; p.amount = amount; p.note = note; p.forMonth = monthOf(date);
+    }
   } else {
     const s = state.staff.find(x => x.id === currentPayStaffId);
     if (!s) return;
@@ -6537,7 +6874,19 @@ async function deleteSalaryPayment(id) {
   await saveData();
   renderStaff();
   renderDashboard();
-  if (p) notifyEdit(`🗑️💵 حذف خلاص راتب: ${fmt(p.amount)} درهم`, `🗑️💵 Deleted salary payment: ${fmt(p.amount)} DH`);
+  if (p) {
+    const staffName = staffNameById(p.staffId);
+    recordAuditEntry({
+      entityType: 'Payment',
+      entityId: p.id,
+      entityRef: `Salary Payment: ${staffName} (${p.date})`,
+      field: 'Record Status',
+      oldValue: `${fmt(p.amount)} DH`,
+      newValue: 'DELETED',
+      action: 'delete'
+    });
+    notifyEdit(`🗑️💵 حذف خلاص راتب: ${fmt(p.amount)} درهم`, `🗑️💵 Deleted salary payment: ${fmt(p.amount)} DH`);
+  }
 }
 
 /* ============== BONUSES ============== */
@@ -7313,6 +7662,19 @@ async function saveCredit() {
         ? 'لا يمكن تغيير المبلغ بعدما رجعت الفلوس. ارجع للحالة "مفتوحة" أولا.'
         : 'Cannot change amount after repayment. Mark as Open first.');
       return;
+    }
+    const creditRef = `Credit: ${c.lender}`;
+    if (+c.amount !== +amount) {
+      recordAuditEntry({ entityType: 'Credit', entityId: c.id, entityRef: creditRef, field: 'Amount', oldValue: `${fmt(c.amount)} DH`, newValue: `${fmt(amount)} DH`, action: 'edit' });
+    }
+    if (c.lender !== lender) {
+      recordAuditEntry({ entityType: 'Credit', entityId: c.id, entityRef: creditRef, field: 'Lender/Person', oldValue: c.lender, newValue: lender, action: 'edit' });
+    }
+    if (c.date !== date) {
+      recordAuditEntry({ entityType: 'Credit', entityId: c.id, entityRef: creditRef, field: 'Date', oldValue: c.date, newValue: date, action: 'edit' });
+    }
+    if ((c.reason || '') !== (reason || '')) {
+      recordAuditEntry({ entityType: 'Credit', entityId: c.id, entityRef: creditRef, field: 'Reason', oldValue: c.reason || '—', newValue: reason || '—', action: 'edit' });
     }
     c.lender = lender; c.date = date; c.amount = amount;
     c.reason = reason; c.dueDate = dueDate; c.note = note;
@@ -8255,9 +8617,55 @@ async function saveCharge() {
   if (!amount) { alert(t('fillCharge')); return; }
 
   if (editingChargeId) {
-    // UPDATE existing charge — keep its id and reminder link untouched
+    // UPDATE existing charge — track historical diff and keep its id
     const c = state.charges.find(x => x.id === editingChargeId);
     if (c) {
+      const entityRef = `Expense: ${c.category || category}${c.description ? ' ('+c.description+')' : ''}`;
+      if (+c.amount !== +amount) {
+        recordAuditEntry({
+          entityType: 'Expense',
+          entityId: c.id,
+          entityRef,
+          field: 'Amount',
+          oldValue: `${fmt(c.amount)} DH`,
+          newValue: `${fmt(amount)} DH`,
+          action: 'edit'
+        });
+      }
+      if ((c.description || '') !== (description || '')) {
+        recordAuditEntry({
+          entityType: 'Expense',
+          entityId: c.id,
+          entityRef,
+          field: 'Description',
+          oldValue: c.description || '—',
+          newValue: description || '—',
+          action: 'edit'
+        });
+      }
+      if (c.category !== category) {
+        recordAuditEntry({
+          entityType: 'Expense',
+          entityId: c.id,
+          entityRef,
+          field: 'Category',
+          oldValue: c.category || '—',
+          newValue: category,
+          action: 'edit'
+        });
+      }
+      if (c.responsibility !== responsibility) {
+        recordAuditEntry({
+          entityType: 'Expense',
+          entityId: c.id,
+          entityRef,
+          field: 'Responsibility',
+          oldValue: c.responsibility || 'all',
+          newValue: responsibility,
+          action: 'edit'
+        });
+      }
+
       c.category = category;
       c.description = description;
       c.amount = amount;
@@ -8524,7 +8932,18 @@ async function deleteCharge(id) {
   await saveData();
   renderCharges();
   renderDashboard();
-  if (ch) notifyEdit(`🗑️ حذف مصروف: ${ch.category||''} (${fmt(ch.amount)} درهم)`, `🗑️ Deleted charge: ${ch.category||''} (${fmt(ch.amount)} DH)`);
+  if (ch) {
+    recordAuditEntry({
+      entityType: 'Expense',
+      entityId: ch.id,
+      entityRef: `Expense: ${ch.category || ''}${ch.description ? ' ('+ch.description+')' : ''}`,
+      field: 'Record Status',
+      oldValue: `${fmt(ch.amount)} DH (Active)`,
+      newValue: 'DELETED',
+      action: 'delete'
+    });
+    notifyEdit(`🗑️ حذف مصروف: ${ch.category||''} (${fmt(ch.amount)} درهم)`, `🗑️ Deleted charge: ${ch.category||''} (${fmt(ch.amount)} DH)`);
+  }
 }
 
 /* ============== REPORTS ============== */
@@ -9025,75 +9444,303 @@ async function notifyLoginIfNewDevice(role) {
   }
 }
 
+// ===== TELEGRAM INTEGRATION & AUDIT LOG SYSTEM =====
+const DEFAULT_TELEGRAM_BOT_TOKEN = '8601591650:AAFwrRBtiOUBcOku5OD5Iayvsq_rGYR73Qg';
+
 // Fire-and-forget: alerts the owner on Telegram whenever data is edited.
 // `actionAr` / `actionEn` is a short description of what changed.
-function notifyEdit(actionAr, actionEn) {
+function notifyEdit(actionAr, actionEn, branchId) {
   try {
     if (!state.settings || state.settings.telegramEditAlerts === false) return;
-    if (!state.settings.telegramToken || !state.settings.telegramChatId) return;
+    const branch = branchId || currentBranchId || 'tarfaya';
+    const club = getExactClubName(branch);
     const ar = (lang === 'ar');
     const roleLabel = currentRole === 'owner'
       ? (ar ? 'المالك 👑' : 'Owner 👑')
       : (currentRole === 'manager' ? (ar ? 'المدير' : 'Manager') : (ar ? 'مستخدم' : 'User'));
     const when = new Date().toLocaleString(ar ? 'ar-MA' : 'en-GB');
-    const club = (state.settings.clubName || '').trim();
     const msg =
-      `✏️ <b>${ar ? 'تعديل في التطبيق' : 'App edit'}</b>\n` +
-      (club ? `🏷️ ${club}\n` : '') +
-      `\n👤 <b>${ar ? 'من طرف' : 'By'}:</b> ${roleLabel}\n` +
+      `🔔 <b>${club}</b>\n` +
+      `Club: ${club}\n` +
+      `━━━━━━━━━━━━━━━━\n` +
+      `✏️ <b>${ar ? 'تعديل في التطبيق' : 'App Edit'}</b>\n` +
+      `👤 <b>${ar ? 'من طرف' : 'By'}:</b> ${roleLabel}\n` +
       `📝 <b>${ar ? 'العملية' : 'Action'}:</b> ${ar ? actionAr : actionEn}\n` +
       `🕐 <b>${ar ? 'الوقت' : 'Time'}:</b> ${when}`;
     // fire and forget — never block the edit on a network call
-    sendTelegramMessage(msg).catch(() => {});
+    sendTelegramMessage(msg, branch).catch(() => {});
   } catch (e) {
     console.warn('edit alert failed', e);
   }
 }
 
-async function sendTelegramMessage(text) {
-  const token = (state.settings.telegramToken || '').trim();
-  const chatIdsRaw = (state.settings.telegramChatId || '').trim();
+// Complete change history / audit trail recording engine
+function recordAuditEntry({ entityType, entityId, entityRef, field, oldValue, newValue, action = 'edit', branchId, note = '' }) {
+  const oldValClean = (oldValue != null) ? String(oldValue).trim() : '';
+  const newValClean = (newValue != null) ? String(newValue).trim() : '';
+  if (oldValClean === newValClean) return null;
+
+  const branch = branchId || currentBranchId || 'tarfaya';
+  const clubName = getExactClubName(branch);
+  const user = (currentRole === 'owner')
+    ? (lang === 'ar' ? 'المالك 👑' : 'Owner 👑')
+    : (currentRole === 'manager' ? (lang === 'ar' ? 'المدير' : 'Manager') : (currentRole || 'User'));
+
+  const now = new Date();
+  const timestamp = now.toISOString();
+  const dateStr = now.toLocaleDateString(lang === 'ar' ? 'ar-MA' : 'en-GB') + ' ' + now.toLocaleTimeString(lang === 'ar' ? 'ar-MA' : 'en-GB');
+
+  const oldStr = (oldValue != null && oldValue !== '') ? String(oldValue) : (lang === 'ar' ? '(فارغ)' : '(empty)');
+  const newStr = (newValue != null && newValue !== '') ? String(newValue) : (lang === 'ar' ? '(فارغ)' : '(empty)');
+
+  const entry = {
+    id: 'aud_' + uid(),
+    timestamp,
+    dateStr,
+    branchId: branch,
+    clubName,
+    user,
+    role: currentRole || 'owner',
+    entityType,
+    entityId: String(entityId || ''),
+    entityRef: entityRef || `${entityType} #${entityId || ''}`,
+    action, // 'edit', 'delete', 'create'
+    field,
+    oldValue: oldStr,
+    newValue: newStr,
+    changeText: `${oldStr} → ${newStr}`,
+    note
+  };
+
+  if (!state.auditLog || !Array.isArray(state.auditLog)) state.auditLog = [];
+  state.auditLog.unshift(entry);
+  if (state.auditLog.length > 2000) state.auditLog.length = 2000;
+
+  // Persist directly to Firebase Realtime Database for permanent server-backed audit trail
+  if (appMode === 'online') {
+    try {
+      const cfg = getBranchConfig(branch);
+      rtdbSet(`${cfg.dbPath}/auditLog/${entry.id}`, entry).catch(err => {
+        console.warn('[Audit Cloud Sync Warn]:', err.message);
+      });
+    } catch (e) {
+      console.warn('[Audit Cloud Sync Error]:', e);
+    }
+  }
+
+  // Send Telegram notification with old & new values
+  if (state.settings && state.settings.telegramEditAlerts !== false) {
+    const tgMsg =
+      `🔔 <b>${clubName}</b>\n` +
+      `Club: ${clubName}\n` +
+      `━━━━━━━━━━━━━━━━\n` +
+      `📝 <b>${lang==='ar'?'سجل التعديلات':'Change History / Audit'}</b>\n` +
+      `📌 <b>${lang==='ar'?'السجل':'Record'}:</b> ${entry.entityRef}\n` +
+      `⚙️ <b>${lang==='ar'?'الحقل':'Field'}:</b> ${field}\n` +
+      `🔴 <b>${lang==='ar'?'السابق':'Previous'}:</b> ${oldStr}\n` +
+      `🟢 <b>${lang==='ar'?'الجديد':'New'}:</b> ${newStr}\n` +
+      `🔄 <b>${lang==='ar'?'التغيير':'Change'}:</b> ${oldStr} ➔ ${newStr}\n` +
+      `👤 <b>${lang==='ar'?'المستخدم':'User'}:</b> ${user}\n` +
+      `🕐 <b>${lang==='ar'?'التاريخ':'Date'}:</b> ${dateStr}`;
+
+    sendTelegramMessage(tgMsg, branch).catch(() => {});
+  }
+
+  return entry;
+}
+
+// Render the interactive change history & audit trail table
+function renderAuditLog() {
+  const tbody = document.getElementById('auditTableBody');
+  const emptyEl = document.getElementById('auditEmptyState');
+  const countBadge = document.getElementById('auditCountBadge');
+  if (!tbody) return;
+
+  const logs = state.auditLog || [];
+  const search = ((document.getElementById('auditSearchInput') || {}).value || '').trim().toLowerCase();
+  const clubFilter = ((document.getElementById('auditClubFilter') || {}).value || 'current');
+  const typeFilter = ((document.getElementById('auditTypeFilter') || {}).value || 'all');
+
+  const filtered = logs.filter(entry => {
+    // Club filter
+    if (clubFilter === 'current') {
+      if (entry.branchId && entry.branchId !== currentBranchId) return false;
+    } else if (clubFilter === 'tarfaya' || clubFilter === 'laayoune') {
+      if (entry.branchId !== clubFilter) return false;
+    }
+    // Type filter
+    if (typeFilter !== 'all' && entry.entityType !== typeFilter) return false;
+    // Search query
+    if (search) {
+      const str = `${entry.entityRef} ${entry.field} ${entry.oldValue} ${entry.newValue} ${entry.user} ${entry.changeText} ${entry.clubName}`.toLowerCase();
+      if (!str.includes(search)) return false;
+    }
+    return true;
+  });
+
+  if (countBadge) {
+    countBadge.textContent = `${filtered.length} ${lang==='ar'?'تعديل':'Changes'}`;
+  }
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '';
+    if (emptyEl) emptyEl.style.display = 'block';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  let html = '';
+  filtered.forEach(item => {
+    const clubBadgeClass = (item.branchId === 'laayoune') ? 'laayoune' : 'tarfaya';
+    const actionClass = item.action === 'delete' ? 'audit-action-delete' : (item.action === 'create' ? 'audit-action-create' : 'audit-action-edit');
+    const actionLabel = item.action === 'delete' ? (lang==='ar'?'حذف':'DELETE') : (item.action === 'create' ? (lang==='ar'?'إنشاء':'CREATE') : (lang==='ar'?'تعديل':'EDIT'));
+
+    html += `<tr>
+      <td style="white-space:nowrap;font-size:12px;color:var(--text-dim)">
+        <div>${item.dateStr || ''}</div>
+        <div style="font-size:10px;color:var(--text-faint)">${item.timestamp ? item.timestamp.slice(0, 10) : ''}</div>
+      </td>
+      <td>
+        <span class="audit-badge ${clubBadgeClass}">${item.clubName || getExactClubName(item.branchId)}</span>
+      </td>
+      <td>
+        <span style="font-weight:600;font-size:12px">${item.user || '—'}</span>
+      </td>
+      <td>
+        <div style="font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px">
+          <span>${item.entityRef || '—'}</span>
+          <span class="audit-action-tag ${actionClass}">${actionLabel}</span>
+        </div>
+        ${item.note ? `<div style="font-size:11px;color:var(--text-dim);margin-top:2px">${item.note}</div>` : ''}
+      </td>
+      <td>
+        <strong style="color:var(--cyan);font-size:12px">${item.field || '—'}</strong>
+      </td>
+      <td>
+        <span class="audit-pill-old">${item.oldValue}</span>
+      </td>
+      <td>
+        <span class="audit-pill-new">${item.newValue}</span>
+      </td>
+      <td>
+        <div style="font-weight:600;font-size:12px;color:var(--text);display:flex;align-items:center">
+          <span style="color:#f85149">${item.oldValue}</span>
+          <span class="audit-arrow">➔</span>
+          <span style="color:#3fb950">${item.newValue}</span>
+        </div>
+      </td>
+    </tr>`;
+  });
+
+  tbody.innerHTML = html;
+}
+
+// Export change history to CSV
+function exportAuditLogToCSV() {
+  const logs = state.auditLog || [];
+  if (logs.length === 0) {
+    alert(lang==='ar'?'لا توجد سجلات تعديل للتصدير':'No audit records to export');
+    return;
+  }
+  let csv = 'Timestamp,Date,Club,User,Entity,Record Reference,Field,Old Value,New Value,Action,Note\n';
+  logs.forEach(l => {
+    const row = [
+      `"${l.timestamp || ''}"`,
+      `"${l.dateStr || ''}"`,
+      `"${l.clubName || ''}"`,
+      `"${l.user || ''}"`,
+      `"${l.entityType || ''}"`,
+      `"${(l.entityRef || '').replace(/"/g, '""')}"`,
+      `"${(l.field || '').replace(/"/g, '""')}"`,
+      `"${(l.oldValue || '').replace(/"/g, '""')}"`,
+      `"${(l.newValue || '').replace(/"/g, '""')}"`,
+      `"${l.action || ''}"`,
+      `"${(l.note || '').replace(/"/g, '""')}"`
+    ];
+    csv += row.join(',') + '\n';
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `juby-audit-history-${currentBranchId || 'all'}-${todayStr()}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+async function sendTelegramMessage(text, branchId) {
+  const branch = branchId || currentBranchId || 'tarfaya';
+  const club = getExactClubName(branch);
+  const token = (state.settings && state.settings.telegramToken ? state.settings.telegramToken : DEFAULT_TELEGRAM_BOT_TOKEN).trim();
+  const chatIdsRaw = (state.settings && state.settings.telegramChatId ? state.settings.telegramChatId : '').trim();
 
   if (!token || !chatIdsRaw) {
-    return { ok: false, error: lang==='ar'?'الرجاء إعداد البوت أولا':'Please configure bot first' };
+    const errMsg = lang==='ar'
+      ? `الرجاء إعداد رمز البوت ورقم المحادثة في إعدادات ${club}`
+      : `Please configure Bot Token and Chat ID for ${club} in Settings`;
+    console.warn(`[Telegram Delivery][${club}] Aborted: Bot token or Chat ID is missing.`);
+    return { ok: false, error: errMsg };
   }
 
   // Parse multiple chat IDs (comma, space, semicolon, or newline separated)
   const chatIds = chatIdsRaw.split(/[,;\s\n]+/).map(id => id.trim()).filter(Boolean);
-
   if (chatIds.length === 0) {
-    return { ok: false, error: lang==='ar'?'لا يوجد رقم محادثة صالح':'No valid chat ID' };
+    const errMsg = lang==='ar'?'لا يوجد رقم محادثة صالح':'No valid chat ID configured';
+    console.warn(`[Telegram Delivery][${club}] Aborted: No valid chat IDs parsed.`);
+    return { ok: false, error: errMsg };
   }
 
+  // Ensure message starts prominently with the exact club name and search line
+  let finalMsg = (text || '').trim();
+  const headerExact = `🔔 <b>${club}</b>`;
+  const plainSearchLine = `Club: ${club}`;
+
+  if (!finalMsg.startsWith(headerExact)) {
+    finalMsg = `${headerExact}\n${plainSearchLine}\n━━━━━━━━━━━━━━━━\n` + finalMsg;
+  } else if (!finalMsg.includes(plainSearchLine)) {
+    finalMsg = finalMsg.replace(headerExact, `${headerExact}\n${plainSearchLine}`);
+  }
+
+  const maskedToken = (token.length > 10) ? (token.slice(0, 6) + '***' + token.slice(-4)) : '***';
   const url = `https://api.telegram.org/bot${token}/sendMessage`;
   const results = [];
   const errors = [];
 
   // Send to all chat IDs in parallel
   await Promise.all(chatIds.map(async (chatId) => {
+    const maskedChat = (chatId.length > 4) ? (chatId.slice(0, 3) + '***' + chatId.slice(-2)) : '***';
     try {
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: chatId,
-          text: text,
+          text: finalMsg,
           parse_mode: 'HTML',
           disable_web_page_preview: true
         })
       });
       const data = await response.json();
-      if (data.ok) results.push(chatId);
-      else errors.push(`${chatId}: ${data.description || 'failed'}`);
+      if (response.ok && data.ok) {
+        results.push({ chatId, messageId: data.result?.message_id });
+        console.log(`[Telegram Delivery][${club}] SUCCESS: Delivered to chat ${maskedChat} (Message ID: ${data.result?.message_id}, Bot: ${maskedToken})`);
+      } else {
+        const desc = data.description || `HTTP status ${response.status}`;
+        errors.push(`${maskedChat}: ${desc}`);
+        console.error(`[Telegram Delivery][${club}] FAILED to chat ${maskedChat}: ${desc} (Code: ${data.error_code || response.status})`);
+      }
     } catch (err) {
-      errors.push(`${chatId}: ${err.message}`);
+      errors.push(`${maskedChat}: ${err.message}`);
+      console.error(`[Telegram Delivery][${club}] EXCEPTION to chat ${maskedChat}:`, err.message);
     }
   }));
 
   if (results.length === 0) {
-    return { ok: false, error: errors.join(' · '), sent: 0, total: chatIds.length };
+    return { ok: false, error: errors.join(' · '), sent: 0, total: chatIds.length, errors };
   }
-  return { ok: true, sent: results.length, total: chatIds.length, errors };
+  return { ok: true, sent: results.length, total: chatIds.length, results, errors };
 }
 
 async function saveTelegramSettings() {
@@ -9102,44 +9749,74 @@ async function saveTelegramSettings() {
   const autoDaily = document.getElementById('telegramAutoDaily').checked;
   const loginAlerts = document.getElementById('telegramLoginAlerts').checked;
   const editAlerts = document.getElementById('telegramEditAlerts').checked;
+  const club = getExactClubName();
+
+  const oldSummary = `Token:${state.settings.telegramToken ? 'configured' : 'none'} | Chat:${state.settings.telegramChatId || 'none'}`;
+  const newSummary = `Token:${token ? 'configured' : 'none'} | Chat:${chatId || 'none'}`;
+  if (oldSummary !== newSummary) {
+    recordAuditEntry({
+      entityType: 'settings',
+      entityId: 'telegram',
+      entityRef: `${club} Telegram Settings`,
+      field: 'Telegram Destination',
+      oldValue: oldSummary,
+      newValue: newSummary,
+      action: 'UPDATE',
+      branchId: currentBranchId,
+      note: 'Telegram Bot & Chat ID updated'
+    });
+  }
+
   state.settings.telegramToken = token;
   state.settings.telegramChatId = chatId;
   state.settings.telegramAutoDaily = autoDaily;
   state.settings.telegramLoginAlerts = loginAlerts;
   state.settings.telegramEditAlerts = editAlerts;
   await saveData();
-  showTelegramStatus(lang==='ar'?'✅ تم الحفظ':'✅ Saved', 'success');
+  showTelegramStatus(lang==='ar'?`✅ تم حفظ إعدادات تيليجرام لـ ${club}`:`✅ Saved Telegram settings for ${club}`, 'success');
 }
 
 async function testTelegram() {
   const token = document.getElementById('telegramToken').value.trim();
   const chatId = document.getElementById('telegramChatId').value.trim();
+  const club = getExactClubName();
+
   if (!token || !chatId) {
-    showTelegramStatus(lang==='ar'?'❌ الرجاء ملء الحقول':'❌ Please fill both fields', 'error');
+    showTelegramStatus(lang==='ar'?'❌ الرجاء ملء الحقول (الرمز ورقم المحادثة)':'❌ Please fill both Bot Token and Chat ID', 'error');
     return;
   }
-  // Temporarily save to state for sendTelegramMessage to use
+
+  // Temporarily set to state for test
   const oldToken = state.settings.telegramToken;
   const oldChat = state.settings.telegramChatId;
   state.settings.telegramToken = token;
   state.settings.telegramChatId = chatId;
 
-  showTelegramStatus(lang==='ar'?'⏳ جاري الإختبار...':'⏳ Testing...', 'info');
+  showTelegramStatus(lang==='ar'?'⏳ جاري إرسال إشعار تجريبي وتأكيد التسليم...':'⏳ Sending test notification and verifying delivery...', 'info');
 
-  const clubName = state.settings.clubName || 'Club Manager';
-  const testMsg = `🎱 <b>${clubName}</b>\n\n✅ ${lang==='ar'?'تم الإتصال بنجاح':'Connection successful!'}\n\n${lang==='ar'?'سوف تستقبل التقارير والتذكيرات هنا.':'You will receive reports and reminders here.'}`;
+  const testMsg =
+    `🔔 <b>${club}</b>\n` +
+    `Club: ${club}\n` +
+    `━━━━━━━━━━━━━━━━\n` +
+    `🧪 <b>${lang==='ar'?'اختبار الإتصال':'Test Notification'}</b>\n\n` +
+    `✅ ${lang==='ar'?'تم تأكيد الإتصال مع تيليجرام بنجاح!':'Telegram integration verified successfully!'}\n\n` +
+    `📍 <b>${lang==='ar'?'الفرع':'Branch'}:</b> ${club}\n` +
+    `💬 <b>${lang==='ar'?'المحادثة':'Destination'}:</b> ${chatId.split(/[,;\s]+/).filter(Boolean).length} chat(s)\n` +
+    `🕐 <b>${lang==='ar'?'الوقت':'Timestamp'}:</b> ${new Date().toLocaleString()}`;
 
   const result = await sendTelegramMessage(testMsg);
   if (result.ok) {
     const successMsg = result.total > 1
-      ? (lang==='ar'?`✅ تم الإرسال لـ ${result.sent}/${result.total}`:`✅ Sent to ${result.sent}/${result.total}`)
-      : (lang==='ar'?'✅ تم! تفقد تيليجرام':'✅ Sent! Check your Telegram');
+      ? (lang==='ar'?`✅ تم تأكيد وصول الرسالة لـ ${result.sent}/${result.total} وجهات بنجاح!`:`✅ Verified! Delivered to ${result.sent}/${result.total} destinations.`)
+      : (lang==='ar'?'✅ تم بنجاح! أكد سيرفر تيليجرام وصول الرسالة.':'✅ Verified! Telegram API confirmed delivery.');
     showTelegramStatus(successMsg, 'success');
-    // Auto-save on successful test
+    // Auto-save on verified test
     state.settings.telegramAutoDaily = document.getElementById('telegramAutoDaily').checked;
+    state.settings.telegramLoginAlerts = document.getElementById('telegramLoginAlerts').checked;
+    state.settings.telegramEditAlerts = document.getElementById('telegramEditAlerts').checked;
     await saveData();
   } else {
-    // Restore old values
+    // Restore old values on failure
     state.settings.telegramToken = oldToken;
     state.settings.telegramChatId = oldChat;
     showTelegramStatus('❌ ' + result.error, 'error');
@@ -9148,10 +9825,11 @@ async function testTelegram() {
 
 function showTelegramStatus(msg, type) {
   const el = document.getElementById('telegramStatus');
+  if (!el) return;
   const colors = { success: 'var(--green)', error: 'var(--red)', info: 'var(--gold)' };
   el.innerHTML = `<span style="color:${colors[type] || 'var(--text)'};font-weight:600">${msg}</span>`;
   if (type !== 'info') {
-    setTimeout(() => { el.innerHTML = ''; }, 5000);
+    setTimeout(() => { if (el) el.innerHTML = ''; }, 6000);
   }
 }
 
@@ -9167,12 +9845,14 @@ function buildDailyReportMessage(date) {
   dayShifts.forEach(s => { totalTables += (+s.tables||0); totalCafe += (+s.cafe||0); });
   const grandTotal = totalTables + totalCafe;
 
-  const clubName = state.settings.clubName || 'Club';
+  const club = getExactClubName();
   const currency = state.settings.currency || 'DH';
   const dateObj = new Date(date);
   const dayName = dateObj.toLocaleDateString(lang==='ar'?'ar-MA':'en-US', { weekday: 'long' });
 
-  let msg = `🎱 <b>${clubName}</b>\n`;
+  let msg = `🔔 <b>${club}</b>\n`;
+  msg += `Club: ${club}\n`;
+  msg += `━━━━━━━━━━━━━━━━\n`;
   msg += `📅 <b>${date}</b> · ${dayName}\n`;
   msg += `━━━━━━━━━━━━━━━━\n\n`;
 
@@ -9198,10 +9878,7 @@ function buildDailyReportMessage(date) {
   msg += `   🎯 Tables: ${fmt(totalTables)} ${currency}\n`;
   msg += `   ☕ Café:   ${fmt(totalCafe)} ${currency}\n`;
 
-  // Charges today (only normal/one-time charges have a specific day; fixed
-  // monthly charges are not tied to a single day so they're excluded here)
-  // Charges today: normal charges on this exact date, PLUS any daily charge
-  // whose active range covers this date (fixed monthly ones are excluded).
+  // Charges today
   const todayCharges = state.charges.filter(c => {
     if (c.type === 'fixed') return false;
     if (c.type === 'daily') {
@@ -9228,22 +9905,23 @@ function buildDailyReportMessage(date) {
 }
 
 async function sendTodayReportToTelegram() {
+  const club = getExactClubName();
   if (!state.settings.telegramToken || !state.settings.telegramChatId) {
-    showTelegramStatus(lang==='ar'?'❌ الرجاء إعداد البوت أولا':'❌ Configure bot first', 'error');
+    showTelegramStatus(lang==='ar'?'❌ الرجاء إعداد البوت ورقم المحادثة أولا':'❌ Configure bot token & chat ID first', 'error');
     return;
   }
   const today = todayStr();
   const msg = buildDailyReportMessage(today);
   if (!msg) {
-    showTelegramStatus(lang==='ar'?'⚠️ لا توجد بيانات اليوم':'⚠️ No data for today yet', 'error');
+    showTelegramStatus(lang==='ar'?'⚠️ لا توجد بيانات ورديات لليوم بعد':'⚠️ No shift data for today yet', 'error');
     return;
   }
-  showTelegramStatus(lang==='ar'?'⏳ جاري الإرسال...':'⏳ Sending...', 'info');
+  showTelegramStatus(lang==='ar'?'⏳ جاري إرسال التقرير...':'⏳ Sending report...', 'info');
   const result = await sendTelegramMessage(msg);
   if (result.ok) {
     const successMsg = result.total > 1
-      ? (lang==='ar'?`✅ تم الإرسال لـ ${result.sent}/${result.total}`:`✅ Sent to ${result.sent}/${result.total}`)
-      : (lang==='ar'?'✅ تم الإرسال!':'✅ Sent successfully!');
+      ? (lang==='ar'?`✅ تم إرسال تقرير ${club} لـ ${result.sent}/${result.total}`:`✅ Sent ${club} report to ${result.sent}/${result.total}`)
+      : (lang==='ar'?`✅ تم إرسال تقرير ${club} بنجاح!`:`✅ Sent ${club} report successfully!`);
     showTelegramStatus(successMsg, 'success');
   } else {
     showTelegramStatus('❌ ' + result.error, 'error');
@@ -9281,13 +9959,14 @@ async function sendReminderToTelegram(reminder) {
     urgencyText = `⏰ <b>${lang==='ar'?`بعد ${days} يوم`:`In ${days} days`}</b>`;
   }
 
-  const clubName = state.settings.clubName || 'Club';
+  const club = getExactClubName();
   const typeName = REMINDER_TYPES[reminder.type] ? (lang==='ar' ? type.ar : type.en) : reminder.type;
 
   let msg = `${urgencyHeader}\n`;
-  msg += `🔔 <b>${lang==='ar'?'تذكير خلاص':'PAYMENT REMINDER'}</b>\n`;
-  msg += `<i>${clubName}</i>\n`;
-  msg += `━━━━━━━━━━━━━━━━\n\n`;
+  msg += `🔔 <b>${club}</b>\n`;
+  msg += `Club: ${club}\n`;
+  msg += `━━━━━━━━━━━━━━━━\n`;
+  msg += `📌 <b>${lang==='ar'?'تذكير خلاص':'PAYMENT REMINDER'}</b>\n\n`;
   msg += `${type.icon} <b>${reminder.title}</b>\n`;
   msg += `📋 ${typeName}\n`;
   msg += `💰 <b>${fmt(reminder.amount)} ${currency}</b>\n`;
@@ -9351,6 +10030,13 @@ function renderSettings() {
       });
     }
   }
+  const tgBranchBadge = document.getElementById('telegramBranchBadge');
+  if (tgBranchBadge) {
+    const exactName = getExactClubName();
+    tgBranchBadge.textContent = exactName;
+    tgBranchBadge.className = 'audit-badge ' + (currentBranchId === 'laayoune' ? 'laayoune' : 'tarfaya');
+  }
+
   const tgToken = document.getElementById('telegramToken');
   const tgChat = document.getElementById('telegramChatId');
   const tgAuto = document.getElementById('telegramAutoDaily');
@@ -9399,10 +10085,40 @@ function renderSettings() {
 }
 
 async function saveSettings() {
+  const oldClubName = state.settings.clubName || '';
+  const oldCurrency = state.settings.currency || 'DH';
+  const newClubName = document.getElementById('clubName').value.trim();
+  const newCurrency = document.getElementById('clubCurrency').value.trim() || 'DH';
+
+  if (oldClubName !== newClubName) {
+    recordAuditEntry({
+      entityType: 'settings',
+      entityId: 'clubName',
+      entityRef: 'Club Name',
+      field: 'Club Name',
+      oldValue: oldClubName,
+      newValue: newClubName,
+      action: 'UPDATE',
+      branchId: currentBranchId
+    });
+  }
+  if (oldCurrency !== newCurrency) {
+    recordAuditEntry({
+      entityType: 'settings',
+      entityId: 'currency',
+      entityRef: 'Currency',
+      field: 'Currency',
+      oldValue: oldCurrency,
+      newValue: newCurrency,
+      action: 'UPDATE',
+      branchId: currentBranchId
+    });
+  }
+
   state.settings = {
     ...state.settings,
-    clubName: document.getElementById('clubName').value,
-    currency: document.getElementById('clubCurrency').value || 'DH'
+    clubName: newClubName,
+    currency: newCurrency
   };
   await saveData();
   alert(t('saved'));
@@ -9420,6 +10136,34 @@ async function savePins() {
   if (op === mp) {
     alert(lang==='ar'?'يجب أن يكون كل رقم سري مختلف':'PINs must be different');
     return;
+  }
+  const oldOp = state.settings.ownerPin || '1234';
+  const oldMp = state.settings.managerPin || '0000';
+  if (oldOp !== op) {
+    recordAuditEntry({
+      entityType: 'settings',
+      entityId: 'ownerPin',
+      entityRef: 'Security PIN',
+      field: 'Owner PIN',
+      oldValue: '****',
+      newValue: '**** (Updated)',
+      action: 'UPDATE',
+      branchId: currentBranchId,
+      note: 'Owner PIN modified'
+    });
+  }
+  if (oldMp !== mp) {
+    recordAuditEntry({
+      entityType: 'settings',
+      entityId: 'managerPin',
+      entityRef: 'Security PIN',
+      field: 'Manager PIN',
+      oldValue: '****',
+      newValue: '**** (Updated)',
+      action: 'UPDATE',
+      branchId: currentBranchId,
+      note: 'Manager PIN modified'
+    });
   }
   state.settings.ownerPin = op;
   state.settings.managerPin = mp;
@@ -9614,6 +10358,19 @@ async function saveDebt() {
           : `New amount (${fmt(totalAmount)}) is less than already paid (${fmt(paid)}). Adjust the amount or remove some payments.`);
         return;
       }
+      const debtRef = `Old Debt: ${d.creditor}`;
+      if (+d.totalAmount !== +totalAmount) {
+        recordAuditEntry({ entityType: 'Debt', entityId: d.id, entityRef: debtRef, field: 'Total Amount', oldValue: `${fmt(d.totalAmount)} DH`, newValue: `${fmt(totalAmount)} DH`, action: 'edit' });
+      }
+      if (d.creditor !== creditor) {
+        recordAuditEntry({ entityType: 'Debt', entityId: d.id, entityRef: debtRef, field: 'Creditor', oldValue: d.creditor, newValue: creditor, action: 'edit' });
+      }
+      if ((d.reason || '') !== (reason || '')) {
+        recordAuditEntry({ entityType: 'Debt', entityId: d.id, entityRef: debtRef, field: 'Reason', oldValue: d.reason || '—', newValue: reason || '—', action: 'edit' });
+      }
+      if (d.createdDate !== createdDate) {
+        recordAuditEntry({ entityType: 'Debt', entityId: d.id, entityRef: debtRef, field: 'Date', oldValue: d.createdDate, newValue: createdDate, action: 'edit' });
+      }
       d.creditor = creditor;
       d.reason = reason;
       d.totalAmount = totalAmount;
@@ -9646,7 +10403,18 @@ async function deleteDebt(id) {
   await saveData();
   renderDebts();
   renderDashboard();
-  if (d) notifyEdit(`🗑️🔒 حذف دين قديم: ${d.creditor} — ${fmt(d.totalAmount)} درهم`, `🗑️🔒 Deleted old debt: ${d.creditor} — ${fmt(d.totalAmount)} DH`);
+  if (d) {
+    recordAuditEntry({
+      entityType: 'Debt',
+      entityId: d.id,
+      entityRef: `Old Debt: ${d.creditor}`,
+      field: 'Record Status',
+      oldValue: `${d.creditor} — ${fmt(d.totalAmount)} DH`,
+      newValue: 'DELETED',
+      action: 'delete'
+    });
+    notifyEdit(`🗑️🔒 حذف دين قديم: ${d.creditor} — ${fmt(d.totalAmount)} درهم`, `🗑️🔒 Deleted old debt: ${d.creditor} — ${fmt(d.totalAmount)} DH`);
+  }
 }
 
 /* ---- Pay debt ---- */
@@ -9681,12 +10449,25 @@ async function saveDebtPayment() {
   if (!amount || amount <= 0) { alert(t('fillPay')); return; }
   if (amount > debtRemaining(d) + 0.001) { alert(t('payTooMuch')); return; }
 
+  const remBefore = debtRemaining(d);
   if (!d.payments) d.payments = [];
-  d.payments.push({ id: uid(), date, amount, note });
+  const payId = uid();
+  d.payments.push({ id: payId, date, amount, note });
   await saveData();
   closePayDebtModal();
   renderDebts();
   renderDashboard();
+
+  recordAuditEntry({
+    entityType: 'Debt',
+    entityId: payId,
+    entityRef: `Debt Payment: ${d.creditor}`,
+    field: 'Payment Amount',
+    oldValue: `Remaining: ${fmt(remBefore)} DH`,
+    newValue: `Paid: ${fmt(amount)} DH (${date})`,
+    action: 'create'
+  });
+
   notifyEdit(`🔒 خلاص دين: ${d.creditor} — ${fmt(amount)} درهم`, `🔒 Debt payment: ${d.creditor} — ${fmt(amount)} DH`);
 }
 
@@ -9699,7 +10480,18 @@ async function deleteDebtPayment(debtId, payId) {
   await saveData();
   renderDebts();
   renderDashboard();
-  if (dp) notifyEdit(`🗑️🔒 حذف خلاص دين: ${d.creditor} — ${fmt(dp.amount)} درهم`, `🗑️🔒 Deleted debt payment: ${d.creditor} — ${fmt(dp.amount)} DH`);
+  if (dp) {
+    recordAuditEntry({
+      entityType: 'Debt',
+      entityId: payId,
+      entityRef: `Debt Payment: ${d.creditor}`,
+      field: 'Payment Status',
+      oldValue: `${fmt(dp.amount)} DH (${dp.date})`,
+      newValue: 'DELETED',
+      action: 'delete'
+    });
+    notifyEdit(`🗑️🔒 حذف خلاص دين: ${d.creditor} — ${fmt(dp.amount)} درهم`, `🗑️🔒 Deleted debt payment: ${d.creditor} — ${fmt(dp.amount)} DH`);
+  }
 }
 
 /* ---- Render debts ---- */
