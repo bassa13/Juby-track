@@ -23,6 +23,7 @@ export function CashierTab({
 
   const [startingCash, setStartingCash] = useState(0);
   const [startingJetons, setStartingJetons] = useState(settings.defaultStartingJetons || 200);
+  const [isOpeningShift, setIsOpeningShift] = useState(false);
 
   const isAdmin = currentUser?.role === 'admin';
   const activeShift = shifts.find(s => !s.endTime);
@@ -102,9 +103,15 @@ export function CashierTab({
     };
   };
 
-  const handleOpenShift = (e) => {
+  const handleOpenShift = async (e) => {
     e.preventDefault();
-    onOpenShift(startingJetons, startingCash);
+    if (isOpeningShift) return;
+    setIsOpeningShift(true);
+    try {
+      await onOpenShift(startingJetons, startingCash);
+    } finally {
+      setIsOpeningShift(false);
+    }
   };
 
   const getStaffName = (sid) => {
@@ -272,8 +279,8 @@ export function CashierTab({
                 onChange={(e) => setStartingJetons(parseInt(e.target.value) || 0)} 
               />
             </div>
-            <button type="submit" className="btn btn-primary btn-block btn-lg" style={{ marginTop: '12px' }}>
-              ▶ {t('open_shift')}
+            <button type="submit" className="btn btn-primary btn-block btn-lg" style={{ marginTop: '12px' }} disabled={isOpeningShift}>
+              {isOpeningShift ? '⏳ ' + t('opening') || 'Opening...' : '▶ ' + t('open_shift')}
             </button>
           </form>
         </div>

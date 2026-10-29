@@ -42,6 +42,7 @@ export function PaymentModal() {
   };
 
   const handleConfirm = () => {
+    if (isSubmitting) return;
     setError('');
     const val = parseFloat(amount);
     if (!val || val <= 0) {
@@ -56,10 +57,12 @@ export function PaymentModal() {
     } else {
       res = addAdvance(player.id, val, note);
     }
-    setIsSubmitting(false);
 
-    if (res.success) {
+    if (res && res.success) {
       setPendingAction(null);
+    } else {
+      setIsSubmitting(false);
+      setError(res?.error ? t(res.error) : 'Error');
     }
   };
 

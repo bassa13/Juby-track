@@ -13,14 +13,17 @@ export function SellJetonsModal() {
   const [count, setCount] = useState('10');
   const [remiz, setRemiz] = useState('0');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (pendingAction?.type !== 'sellJetons') return null;
 
   const handleClose = () => {
+    if (isSubmitting) return;
     setPendingAction(null);
   };
 
   const handleConfirm = () => {
+    if (isSubmitting) return;
     setError('');
     const countVal = parseInt(count) || 0;
     const remizVal = parseFloat(remiz) || 0;
@@ -30,11 +33,18 @@ export function SellJetonsModal() {
       return;
     }
 
-    const res = sellJetons(countVal, remizVal);
-    if (res.success) {
-      setPendingAction(null);
-    } else {
-      setError(t(res.error) || 'Error');
+    setIsSubmitting(true);
+    try {
+      const res = sellJetons(countVal, remizVal);
+      if (res.success) {
+        setPendingAction(null);
+      } else {
+        setError(t(res.error) || 'Error');
+        setIsSubmitting(false);
+      }
+    } catch (err) {
+      setError(err?.message || 'Error');
+      setIsSubmitting(false);
     }
   };
 
@@ -85,9 +95,9 @@ export function SellJetonsModal() {
         </div>
 
         <div className="modal-foot">
-          <button type="button" className="btn" onClick={handleClose}>{t('cancel')}</button>
-          <button type="button" className="btn btn-success" onClick={handleConfirm}>
-            💰 {t('sell_btn')}
+          <button type="button" className="btn" onClick={handleClose} disabled={isSubmitting}>{t('cancel')}</button>
+          <button type="button" className="btn btn-success" onClick={handleConfirm} disabled={isSubmitting}>
+            {isSubmitting ? '...' : `💰 ${t('sell_btn')}`}
           </button>
         </div>
       </div>

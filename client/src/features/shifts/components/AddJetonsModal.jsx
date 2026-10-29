@@ -11,6 +11,7 @@ export function AddJetonsModal() {
   const [count, setCount] = useState('50');
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (pendingAction?.type !== 'addJetons') return null;
 
@@ -19,6 +20,7 @@ export function AddJetonsModal() {
   };
 
   const handleConfirm = () => {
+    if (isSubmitting) return;
     setError('');
     const countVal = parseInt(count) || 0;
 
@@ -27,11 +29,13 @@ export function AddJetonsModal() {
       return;
     }
 
+    setIsSubmitting(true);
     const res = addJetonsToDrawer(countVal, note);
-    if (res.success) {
+    if (res && res.success) {
       setPendingAction(null);
     } else {
-      setError(t(res.error) || 'Error');
+      setIsSubmitting(false);
+      setError(t(res?.error || 'Error') || 'Error');
     }
   };
 
@@ -69,8 +73,8 @@ export function AddJetonsModal() {
 
         <div className="modal-foot">
           <button type="button" className="btn" onClick={handleClose}>{t('cancel')}</button>
-          <button type="button" className="btn btn-primary" onClick={handleConfirm}>
-            {t('save')}
+          <button type="button" className="btn btn-primary" onClick={handleConfirm} disabled={isSubmitting}>
+            {isSubmitting ? '⏳...' : t('save')}
           </button>
         </div>
       </div>

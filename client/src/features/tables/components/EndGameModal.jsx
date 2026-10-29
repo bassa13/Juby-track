@@ -51,13 +51,15 @@ export function EndGameModal() {
   };
 
   const handleEnd = () => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
     const scoreMap = game.type === '8ball' && game.players.length === 2 ? scores : null;
     const res = endGame(game.id, winnerId, scoreMap, parseFloat(manualDiscount) || 0, discountReason);
-    setIsSubmitting(false);
 
-    if (res.success) {
+    if (res && res.success) {
       setPendingAction(null);
+    } else {
+      setIsSubmitting(false);
     }
   };
 

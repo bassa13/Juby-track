@@ -99,13 +99,15 @@ export function CloseShiftModal() {
   };
 
   const handleConfirmClose = () => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
     const finalCashVal = parseFloat(actualCash) || 0;
-    const res = closeShift(activeShift.id, finalCashVal);
-    setIsSubmitting(false);
+    const res = closeShift(finalCashVal);
 
-    if (res.success) {
+    if (res && res.success) {
       setPendingAction(null);
+    } else {
+      setIsSubmitting(false);
     }
   };
 

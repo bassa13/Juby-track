@@ -54,6 +54,7 @@ export function PlayerModal() {
 
   const handleConfirm = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setError('');
     setSuccess('');
 

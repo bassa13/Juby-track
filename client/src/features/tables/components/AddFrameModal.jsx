@@ -25,11 +25,13 @@ export function AddFrameModal() {
   };
 
   const handleConfirm = () => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
     const res = addFrame(game.id, winner);
-    setIsSubmitting(false);
-    if (res.success) {
+    if (res && res.success) {
       setPendingAction(null);
+    } else {
+      setIsSubmitting(false);
     }
   };
 

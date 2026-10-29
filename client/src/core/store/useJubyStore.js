@@ -309,6 +309,10 @@ export const useJubyStore = create((set, get) => {
       const table = tables.find(t => t.id === tableId);
       if (!table) return { success: false, error: 'table_not_found' };
 
+      // Guard: prevent duplicate game starting on table already in use
+      const existingActive = games.find(g => g.tableId === tableId && !g.endTime);
+      if (existingActive) return { success: false, error: 'table_already_in_use' };
+
       const players = [player1Id];
       if (player2Id) players.push(player2Id);
       const splitMode = players.length === 1 ? 'single' : 'loser';
@@ -342,6 +346,7 @@ export const useJubyStore = create((set, get) => {
       const { games, settings, tables, players, currentUser } = get();
       const gameIndex = games.findIndex(g => g.id === gameId);
       if (gameIndex === -1) return { success: false, error: 'game_not_found' };
+      if (games[gameIndex].endTime) return { success: true, alreadyEnded: true }; // Guard against duplicate endGame calls
 
       const game = { ...games[gameIndex] };
       game.winnerId = winnerId || null;
@@ -458,10 +463,19 @@ export const useJubyStore = create((set, get) => {
     // Cashier & Payments Domain Actions
     makePayment: (playerId, amount, note = '') => {
       const { payments, currentUser } = get();
+      const numAmount = parseFloat(amount) || 0;
+
+      // Deduplication: prevent duplicate payment within 2 seconds
+      const lastSamePay = payments.slice(-5).find(p => p.playerId === playerId && Math.abs(p.amount - numAmount) < 0.001 && Date.now() - p.date < 2000);
+      if (lastSamePay) {
+        console.warn('Blocked duplicate payment in store:', playerId, numAmount);
+        return { success: true, duplicate: true };
+      }
+
       const newPayment = {
         id: uid(),
         playerId,
-        amount: parseFloat(amount) || 0,
+        amount: numAmount,
         date: Date.now(),
         staffId: currentUser?.id || 'admin',
         note: note.trim()

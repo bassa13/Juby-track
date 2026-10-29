@@ -14,6 +14,7 @@ export function AddFauxMiseModal() {
   const [reason, setReason] = useState('misshot');
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (pendingAction?.type !== 'addFauxMise') return null;
 
@@ -22,6 +23,7 @@ export function AddFauxMiseModal() {
   };
 
   const handleConfirm = () => {
+    if (isSubmitting) return;
     setError('');
     if (!tableId) {
       setError(t('err_required') || 'Champs obligatoires');
@@ -33,6 +35,7 @@ export function AddFauxMiseModal() {
       return;
     }
 
+    setIsSubmitting(true);
     addFauxMise(tableId, countVal, reason, note);
     setPendingAction(null);
   };

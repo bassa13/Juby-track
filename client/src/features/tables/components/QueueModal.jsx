@@ -23,6 +23,7 @@ export function QueueModal() {
   const [player2, setPlayer2] = useState(null);
   const [level, setLevel] = useState('A3');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isAddMode = pendingAction?.type === 'addToQueue';
   const isManageMode = pendingAction?.type === 'manageQueue';
@@ -33,10 +34,12 @@ export function QueueModal() {
   if (!table || (!isAddMode && !isManageMode)) return null;
 
   const handleClose = () => {
+    if (isSubmitting) return;
     setPendingAction(null);
   };
 
   const handleAddConfirm = () => {
+    if (isSubmitting) return;
     setError('');
     if (!player1) {
       setError('⚠️ Khtar Player 1!');
@@ -51,24 +54,44 @@ export function QueueModal() {
       return;
     }
 
-    addToQueue(table.id, player1, player2, table.type === '8ball' ? level : null);
-    setPendingAction(null);
+    setIsSubmitting(true);
+    try {
+      addToQueue(table.id, player1, player2, table.type === '8ball' ? level : null);
+      setPendingAction(null);
+    } catch (err) {
+      setError(err?.message || 'Error');
+      setIsSubmitting(false);
+    }
   };
 
   const handleStartQueued = (entry) => {
-    const res = startGame(table.id, entry.p1, entry.p2, entry.level);
-    if (res.success) {
-      removeFromQueue(table.id, entry.id);
-      setPendingAction(null);
-    } else {
-      setError(t(res.error));
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const res = startGame(table.id, entry.p1, entry.p2, entry.level);
+      if (res.success) {
+        removeFromQueue(table.id, entry.id);
+        setPendingAction(null);
+      } else {
+        setError(t(res.error));
+        setIsSubmitting(false);
+      }
+    } catch (err) {
+      setError(err?.message || 'Error');
+      setIsSubmitting(false);
     }
   };
 
   const handleClearAll = () => {
+    if (isSubmitting) return;
     if (window.confirm('Vider toute la queue?')) {
-      clearQueue(table.id);
-      setPendingAction(null);
+      setIsSubmitting(true);
+      try {
+        clearQueue(table.id);
+        setPendingAction(null);
+      } catch (err) {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -129,9 +152,9 @@ export function QueueModal() {
           </div>
 
           <div className="modal-foot">
-            <button type="button" className="btn" onClick={handleClose}>{t('cancel')}</button>
-            <button type="button" className="btn btn-primary" onClick={handleAddConfirm}>
-              {t('add_to_queue')}
+            <button type="button" className="btn" onClick={handleClose} disabled={isSubmitting}>{t('cancel')}</button>
+            <button type="button" className="btn btn-primary" onClick={handleAddConfirm} disabled={isSubmitting}>
+              {isSubmitting ? '...' : t('add_to_queue')}
             </button>
           </div>
         </div>
@@ -178,6 +201,7 @@ export function QueueModal() {
                       className="btn btn-sm btn-success"
                       onClick={() => handleStartQueued(entry)}
                       style={{ marginRight: '6px' }}
+                      disabled={isSubmitting}
                     >
                       ▶️ Start
                     </button>
@@ -185,7 +209,11 @@ export function QueueModal() {
                   <button
                     type="button"
                     className="btn btn-sm btn-danger"
-                    onClick={() => removeFromQueue(table.id, entry.id)}
+                    onClick={() => {
+                      if (isSubmitting) return;
+                      removeFromQueue(table.id, entry.id);
+                    }}
+                    disabled={isSubmitting}
                   >
                     🗑️
                   </button>
@@ -195,14 +223,14 @@ export function QueueModal() {
           </div>
 
           <div className="row gap-sm mt-md" style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
-            <button type="button" className="btn btn-warning btn-block" onClick={handleClearAll}>
+            <button type="button" className="btn btn-warning btn-block" onClick={handleClearAll} disabled={isSubmitting}>
               🗑️ Clear All
             </button>
           </div>
         </div>
 
         <div className="modal-foot">
-          <button type="button" className="btn" onClick={handleClose}>✕ Fermer</button>
+          <button type="button" className="btn" onClick={handleClose} disabled={isSubmitting}>✕ Fermer</button>
         </div>
       </div>
     </div>

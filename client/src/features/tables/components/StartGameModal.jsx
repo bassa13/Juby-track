@@ -51,15 +51,20 @@ export function StartGameModal() {
       return;
     }
 
+    if (isSubmitting) return;
     setIsSubmitting(true);
     
-    const res = startGame(tableId, player1, player2, level);
-    setIsSubmitting(false);
-
-    if (res.success) {
-      setPendingAction(null);
-    } else {
-      setError(t(res.error));
+    try {
+      const res = startGame(tableId, player1, player2, level);
+      if (res && res.success) {
+        setPendingAction(null);
+      } else {
+        setError(t(res?.error || 'err_unknown'));
+        setIsSubmitting(false);
+      }
+    } catch (err) {
+      setError(err?.message || 'Error');
+      setIsSubmitting(false);
     }
   };
 

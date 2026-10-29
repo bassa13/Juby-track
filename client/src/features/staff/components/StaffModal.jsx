@@ -19,6 +19,7 @@ export function StaffModal() {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState(() => editingStaff ? (editingStaff.role || 'staff') : 'staff');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isAdd && !isEdit) return null;
 
@@ -27,6 +28,7 @@ export function StaffModal() {
   };
 
   const handleConfirm = () => {
+    if (isSubmitting) return;
     setError('');
     if (!name.trim() || !username.trim()) {
       setError(t('err_required'));
@@ -37,6 +39,7 @@ export function StaffModal() {
       return;
     }
 
+    setIsSubmitting(true);
     const staffData = {
       name: name.trim(),
       username: username.trim(),
@@ -124,8 +127,8 @@ export function StaffModal() {
 
         <div className="modal-foot">
           <button type="button" className="btn" onClick={handleClose}>{t('cancel')}</button>
-          <button type="button" className="btn btn-primary" onClick={handleConfirm}>
-            {t('save')}
+          <button type="button" className="btn btn-primary" onClick={handleConfirm} disabled={isSubmitting}>
+            {isSubmitting ? '⏳...' : t('save')}
           </button>
         </div>
       </div>

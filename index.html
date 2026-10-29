@@ -1133,6 +1133,76 @@
     border: 1px solid rgba(88, 166, 255, 0.3);
   }
 
+  /* ===== BUTTON LOADING & IMMEDIATE FEEDBACK STYLES ===== */
+  .btn {
+    position: relative;
+    transition: transform 0.08s ease, filter 0.15s ease, opacity 0.15s ease;
+  }
+  .btn:active:not([disabled]) {
+    transform: scale(0.97);
+    filter: brightness(0.92);
+  }
+  .btn[disabled], .btn.btn-processing {
+    opacity: 0.65 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+  }
+  .btn-spinner {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: btnSpin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  body[dir="rtl"] .btn-spinner {
+    margin-right: 0;
+    margin-left: 6px;
+  }
+  @keyframes btnSpin {
+    to { transform: rotate(360deg); }
+  }
+  .action-toast {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    background: var(--bg-card, #161b22);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    border: 1px solid var(--border);
+    color: var(--text);
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+  }
+  .action-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .action-toast.toast-info { border-color: var(--cyan); color: var(--cyan); }
+  .action-toast.toast-success { border-color: var(--green); color: var(--green); }
+  .action-toast.toast-error { border-color: var(--red); color: var(--red); }
+  .action-toast.toast-warning { border-color: var(--gold); color: var(--gold); }
+  @media (max-width: 600px) {
+    .action-toast {
+      top: 12px;
+      right: 12px;
+      left: 12px;
+      justify-content: center;
+    }
+  }
+
   /* ===== LAAYOUNE PARTNERSHIP STYLES ===== */
   .stakeholder-grid {
     display: grid;
@@ -3597,6 +3667,109 @@ function getExactClubName(branchId) {
   return EXACT_CLUB_NAMES[b] || (b === 'laayoune' ? 'JUBY CLUB LAAYOUNE' : 'JUBY CLUB TARFAYA');
 }
 
+/* ===== ACTION GUARD, DEDUPLICATION & IMMEDIATE FEEDBACK ENGINE ===== */
+const activeActionLocks = new Set();
+const recentTransactionFingerprints = new Map();
+
+function isDuplicateTransaction(fingerprint, windowMs = 2500) {
+  const now = Date.now();
+  const lastTime = recentTransactionFingerprints.get(fingerprint);
+  if (lastTime && (now - lastTime) < windowMs) {
+    console.warn(`[Deduplication] Blocked duplicate transaction "${fingerprint}" (${now - lastTime}ms ago)`);
+    showActionToast(lang === 'ar' ? '⚠️ تم تسجيل العملية مسبقاً' : '⚠️ Action already recorded', 'warning');
+    return true;
+  }
+  recentTransactionFingerprints.set(fingerprint, now);
+  if (recentTransactionFingerprints.size > 200) {
+    for (const [k, v] of recentTransactionFingerprints.entries()) {
+      if (now - v > 30000) recentTransactionFingerprints.delete(k);
+    }
+  }
+  return false;
+}
+
+function showActionToast(msg, type = 'info') {
+  let toast = document.getElementById('globalActionToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'globalActionToast';
+    toast.className = 'action-toast';
+    document.body.appendChild(toast);
+  }
+  toast.className = `action-toast toast-${type} show`;
+  toast.innerHTML = msg;
+  if (toast._timer) clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2400);
+}
+
+async function runGuardedAction(actionKey, triggerEl, actionFn) {
+  if (activeActionLocks.has(actionKey)) {
+    console.warn(`[ActionGuard] Action "${actionKey}" is currently locked. Ignoring duplicate click.`);
+    return;
+  }
+  activeActionLocks.add(actionKey);
+
+  let btn = null;
+  if (triggerEl && triggerEl.nodeType === 1) {
+    btn = triggerEl.closest ? triggerEl.closest('button, .btn, input[type="submit"]') : triggerEl;
+  } else if (window.event && window.event.target && window.event.target.closest) {
+    btn = window.event.target.closest('button, .btn, input[type="submit"]');
+  }
+
+  let origHtml = '';
+  if (btn) {
+    btn.disabled = true;
+    btn.classList.add('btn-processing');
+    origHtml = btn.innerHTML;
+    btn.dataset.origContent = origHtml;
+    const ar = (lang === 'ar');
+    btn.innerHTML = `<span class="btn-spinner"></span> ${ar ? 'جاري الحفظ...' : 'Saving...'}`;
+  }
+
+  try {
+    await actionFn();
+  } catch (err) {
+    console.error(`[ActionGuard] Error in "${actionKey}":`, err);
+    showActionToast('❌ ' + (err.message || 'Error'), 'error');
+    alert((lang === 'ar' ? 'فشل الحفظ: ' : 'Save failed: ') + (err.message || err));
+  } finally {
+    setTimeout(() => {
+      activeActionLocks.delete(actionKey);
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('btn-processing');
+        if (btn.dataset.origContent) {
+          btn.innerHTML = btn.dataset.origContent;
+          delete btn.dataset.origContent;
+        }
+      }
+    }, 320);
+  }
+}
+
+// Global click damper: blocks multiple clicks on the exact same button within 280ms
+if (typeof document !== 'undefined') {
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest ? e.target.closest('button, .btn, input[type="submit"]') : null;
+    if (!btn) return;
+    if (btn.classList.contains('btn-processing') || btn.disabled) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return;
+    }
+    const now = Date.now();
+    const lastClick = btn._lastClickTs || 0;
+    if (now - lastClick < 280) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return;
+    }
+    btn._lastClickTs = now;
+  }, true);
+}
+
 function updateHeaderBranch() {
   const cfg = getBranchConfig(currentBranchId);
   const pill = document.getElementById('headerBranchPill');
@@ -3705,7 +3878,10 @@ function updateLoginModeUi() {
   }
 }
 
-async function doBranchLogin() {
+let isBranchLoggingIn = false;
+async function doBranchLogin(btnEl) {
+  if (isBranchLoggingIn) return;
+  isBranchLoggingIn = true;
   const pinInput = document.getElementById('branchLoginPin');
   const pin = (pinInput ? pinInput.value : '').trim();
   const errEl = document.getElementById('branchLoginError');
@@ -3828,6 +4004,8 @@ async function doBranchLogin() {
   } catch (err) {
     if (overlay) overlay.style.display = 'none';
     if (errEl) errEl.textContent = '❌ ' + err.message;
+  } finally {
+    isBranchLoggingIn = false;
   }
 }
 
@@ -6037,7 +6215,8 @@ function fillStaffSelects() {
   }
 }
 
-async function saveSingleShift(period) {
+async function saveSingleShift(period, btnEl) {
+  return runGuardedAction(`saveSingleShift_${period}`, btnEl, async () => {
   const date = document.getElementById('shiftDate').value;
   if (!date) { alert(t('selectDate')); return; }
 
@@ -6103,17 +6282,22 @@ async function saveSingleShift(period) {
   state.shifts = state.shifts.filter(s => !(s.date === date && s.period === period));
   state.shifts.push({ id: uid(), date, period, tables: T, cafe: C, staffId: Sv });
 
-  await saveData();
+  // IMMEDIATE OPTIMISTIC UI UPDATE
   document.getElementById(f.t).value = '';
   document.getElementById(f.c).value = '';
-  alert(f.icon + ' ' + (lang === 'ar' ? 'تم الحفظ' : 'Saved'));
   renderAllShifts();
   renderDashboard();
+  showActionToast(`${f.icon} ${lang === 'ar' ? 'تم حفظ وردية بنجاح' : 'Shift saved successfully'}`, 'success');
+
+  // Background sync
+  await saveData();
   notifyEdit(`وردية ${date} — ${T+C} درهم`, `Shift ${date} — ${T+C} DH`);
   autoSendDailyReportIfEnabled(date);
+  });
 }
 
-async function saveShift() {
+async function saveShift(btnEl) {
+  return runGuardedAction("saveShift_all", btnEl, async () => {
   const date = document.getElementById('shiftDate').value;
   if (!date) { alert(t('selectDate')); return; }
 
@@ -6196,16 +6380,17 @@ async function saveShift() {
     state.shifts.push({ id: uid(), date, period: 'latenight', tables: lnT, cafe: lnC, staffId: lnS });
   }
 
-  await saveData();
-  // Clear inputs
+  // IMMEDIATE OPTIMISTIC UI UPDATE
   ['morningTables','morningCafe','eveningTables','eveningCafe','lateNightTables','lateNightCafe'].forEach(id => document.getElementById(id).value='');
-  alert(t('saved'));
   renderAllShifts();
   renderDashboard();
-  notifyEdit(`ورديات يوم ${date} (طاولات+مقهى)`, `Shifts for ${date} (tables+café)`);
+  showActionToast(lang === 'ar' ? '✅ تم حفظ جميع الورديات بنجاح' : '✅ All shifts saved successfully', 'success');
 
-  // Auto-send daily report to Telegram if enabled
+  // Background sync
+  await saveData();
+  notifyEdit(`ورديات يوم ${date} (طاولات+مقهى)`, `Shifts for ${date} (tables+café)`);
   autoSendDailyReportIfEnabled(date);
+  });
 }
 
 function renderAllShifts() {
@@ -6266,13 +6451,16 @@ function editShift(id) {
     : `✏️ Edit the «${pLabel}» shift values for ${s.date} above, then click that shift's Save button.`);
 }
 
-async function deleteShift(id) {
-  if (!confirm(t('confirmDelete'))) return;
+async function deleteShift(id, btnEl) {
+  if (!confirm(t("confirmDelete"))) return;
+  return runGuardedAction("deleteShift_" + id, btnEl, async () => {
   const sh = state.shifts.find(s => s.id === id);
   state.shifts = state.shifts.filter(s => s.id !== id);
-  await saveData();
+  // Immediate UI update
   renderAllShifts();
   renderDashboard();
+  showActionToast(lang === 'ar' ? '🗑️ تم حذف الوردية' : '🗑️ Shift deleted', 'warning');
+  await saveData();
   if (sh) {
     recordAuditEntry({
       entityType: 'Shift',
@@ -6285,6 +6473,7 @@ async function deleteShift(id) {
     });
     notifyEdit(`🗑️ حذف وردية ${sh.date} (${(+sh.tables||0)+(+sh.cafe||0)} درهم)`, `🗑️ Deleted shift ${sh.date} (${(+sh.tables||0)+(+sh.cafe||0)} DH)`);
   }
+  });
 }
 
 /* ============== STAFF ============== */
@@ -6534,7 +6723,8 @@ function openStaffModal(id) {
 function editStaff(id) { openStaffModal(id); }
 function closeStaffModal() { document.getElementById('staffModal').classList.remove('active'); }
 
-async function saveStaff() {
+async function saveStaff(btnEl) {
+  return runGuardedAction("saveStaff", btnEl, async () => {
   const name = document.getElementById('staffName').value.trim();
   const role = document.getElementById('staffRole').value.trim();
   const type = document.getElementById('staffType').value;
@@ -6568,25 +6758,33 @@ async function saveStaff() {
     if (!name || (!isManager && !salary)) { alert(t('fillRequired')); return; }
     state.staff.push({ id: uid(), name, role, type, salary, isOwner, isInactive });
   }
-  await saveData();
+  // IMMEDIATE OPTIMISTIC UI UPDATE
   closeStaffModal();
   renderStaff();
   fillStaffSelects();
   renderDashboard();
+  showActionToast(lang === 'ar' ? '✅ تم حفظ الموظف بنجاح' : '✅ Staff member saved successfully', 'success');
+
+  // Background sync
+  await saveData();
   notifyEdit(`موظف: ${name}${editingStaffId ? ' (تعديل)' : ' (جديد)'}`, `Staff: ${name}${editingStaffId ? ' (edited)' : ' (new)'}`);
+  });
 }
 
-async function deleteStaff(id) {
-  if (!confirm(t('confirmDelete'))) return;
+async function deleteStaff(id, btnEl) {
+  if (!confirm(t("confirmDelete"))) return;
+  return runGuardedAction("deleteStaff_" + id, btnEl, async () => {
   const st = state.staff.find(s => s.id === id);
   state.staff = state.staff.filter(s => s.id !== id);
   state.advances = state.advances.filter(a => a.staffId !== id);
   state.absences = state.absences.filter(a => a.staffId !== id);
   state.bonuses = state.bonuses.filter(b => b.staffId !== id);
   state.payments = state.payments.filter(p => p.staffId !== id);
-  await saveData();
+  // Immediate UI update
   renderStaff();
   fillStaffSelects();
+  showActionToast(lang === 'ar' ? '🗑️ تم حذف الموظف' : '🗑️ Staff deleted', 'warning');
+  await saveData();
   if (st) {
     recordAuditEntry({
       entityType: 'Staff',
@@ -6599,6 +6797,7 @@ async function deleteStaff(id) {
     });
     notifyEdit(`🗑️ حذف موظف: ${st.name}`, `🗑️ Deleted staff: ${st.name}`);
   }
+  });
 }
 
 let editingAdvanceId = null;
@@ -6629,7 +6828,8 @@ function editAdvance(id) {
 
 function closeAdvanceModal() { editingAdvanceId = null; document.getElementById('advanceModal').classList.remove('active'); }
 
-async function saveAdvance() {
+async function saveAdvance(btnEl) {
+  return runGuardedAction("saveAdvance", btnEl, async () => {
   const amount = +document.getElementById('advanceAmount').value;
   const date = document.getElementById('advanceDate').value;
   const note = document.getElementById('advanceNote').value.trim();
@@ -6653,20 +6853,28 @@ async function saveAdvance() {
   } else {
     state.advances.push({ id: uid(), staffId: currentAdvanceStaffId, date, amount, note });
   }
-  await saveData();
+  // IMMEDIATE OPTIMISTIC UI UPDATE
   closeAdvanceModal();
   renderStaff();
   renderDashboard();
+  showActionToast(lang === 'ar' ? '✅ تم حفظ التسبيق بنجاح' : '✅ Advance saved successfully', 'success');
+
+  // Background sync
+  await saveData();
   notifyEdit(`تسبيق: ${fmt(amount)} درهم${editingAdvanceId ? ' (تعديل)' : ''}`, `Advance: ${fmt(amount)} DH${editingAdvanceId ? ' (edited)' : ''}`);
+  });
 }
 
-async function deleteAdvance(id) {
-  if (!confirm(t('confirmDelete'))) return;
+async function deleteAdvance(id, btnEl) {
+  if (!confirm(t("confirmDelete"))) return;
+  return runGuardedAction("deleteAdvance_" + id, btnEl, async () => {
   const adv = state.advances.find(a => a.id === id);
   state.advances = state.advances.filter(a => a.id !== id);
-  await saveData();
+  // Immediate UI update
   renderStaff();
   renderDashboard();
+  showActionToast(lang === 'ar' ? '🗑️ تم حذف التسبيق' : '🗑️ Advance deleted', 'warning');
+  await saveData();
   if (adv) {
     const staffName = staffNameById(adv.staffId);
     recordAuditEntry({
@@ -6680,6 +6888,7 @@ async function deleteAdvance(id) {
     });
     notifyEdit(`🗑️ حذف تسبيق: ${fmt(adv.amount)} درهم`, `🗑️ Deleted advance: ${fmt(adv.amount)} DH`);
   }
+  });
 }
 
 /* ============== SALARY PAYMENTS (cash basis) ============== */
@@ -6824,7 +7033,8 @@ function renderSalaryHistory(staffId) {
   `;
 }
 
-async function saveSalaryPayment() {
+async function saveSalaryPayment(btnEl) {
+  return runGuardedAction("saveSalaryPayment", btnEl, async () => {
   const amount = +document.getElementById('payAmount').value;
   const date = document.getElementById('payDate').value;
   const note = document.getElementById('payNote').value.trim();
@@ -6860,33 +7070,43 @@ async function saveSalaryPayment() {
     });
   }
   const staffName = (state.staff.find(x => x.id === currentPayStaffId) || {}).name || '';
-  await saveData();
+  // IMMEDIATE OPTIMISTIC UI UPDATE
   closePayModal();
   renderStaff();
   renderDashboard();
+  showActionToast(lang === 'ar' ? '✅ تم حفظ دفعة الراتب' : '✅ Salary payment saved', 'success');
+
+  // Background sync
+  await saveData();
   notifyEdit(`💵 خلاص راتب: ${staffName} — ${fmt(amount)} درهم${editingPaymentId ? ' (تعديل)' : ''}`, `💵 Salary payment: ${staffName} — ${fmt(amount)} DH${editingPaymentId ? ' (edited)' : ''}`);
+  });
 }
 
-async function deleteSalaryPayment(id) {
+async function deleteSalaryPayment(id, btnEl) {
   if (!confirm(t('confirmDelete'))) return;
-  const p = (state.payments || []).find(x => x.id === id);
-  state.payments = state.payments.filter(p => p.id !== id);
-  await saveData();
-  renderStaff();
-  renderDashboard();
-  if (p) {
-    const staffName = staffNameById(p.staffId);
-    recordAuditEntry({
-      entityType: 'Payment',
-      entityId: p.id,
-      entityRef: `Salary Payment: ${staffName} (${p.date})`,
-      field: 'Record Status',
-      oldValue: `${fmt(p.amount)} DH`,
-      newValue: 'DELETED',
-      action: 'delete'
-    });
-    notifyEdit(`🗑️💵 حذف خلاص راتب: ${fmt(p.amount)} درهم`, `🗑️💵 Deleted salary payment: ${fmt(p.amount)} DH`);
-  }
+  return runGuardedAction('deleteSalaryPayment_' + id, btnEl, async () => {
+    const p = (state.payments || []).find(x => x.id === id);
+    state.payments = (state.payments || []).filter(p => p.id !== id);
+    // Immediate UI update
+    renderStaff();
+    renderDashboard();
+    showActionToast(lang === 'ar' ? '🗑️ تم حذف دفعة الراتب' : '🗑️ Payment deleted', 'warning');
+
+    await saveData();
+    if (p) {
+      const staffName = staffNameById(p.staffId);
+      recordAuditEntry({
+        entityType: 'Payment',
+        entityId: p.id,
+        entityRef: `Salary Payment: ${staffName} (${p.date})`,
+        field: 'Record Status',
+        oldValue: `${fmt(p.amount)} DH`,
+        newValue: 'DELETED',
+        action: 'delete'
+      });
+      notifyEdit(`🗑️💵 حذف خلاص راتب: ${fmt(p.amount)} درهم`, `🗑️💵 Deleted salary payment: ${fmt(p.amount)} DH`);
+    }
+  });
 }
 
 /* ============== BONUSES ============== */
@@ -6924,33 +7144,50 @@ function closeBonusModal() {
   document.getElementById('bonusModal').classList.remove('active');
 }
 
-async function saveBonus() {
-  const amount = +document.getElementById('bonusAmount').value;
-  const date = document.getElementById('bonusDate').value;
-  const type = document.getElementById('bonusType').value;
-  const reason = document.getElementById('bonusReason').value.trim();
-  if (!amount || !date) { alert(t('fillCharge')); return; }
-  if (editingBonusId) {
-    const b = state.bonuses.find(x => x.id === editingBonusId);
-    if (b) { b.date = date; b.amount = amount; b.type = type; b.reason = reason; }
-  } else {
-    state.bonuses.push({ id: uid(), staffId: currentBonusStaffId, date, amount, type, reason });
-  }
-  await saveData();
-  closeBonusModal();
-  renderStaff();
-  renderDashboard();
-  notifyEdit(`منحة/خصم: ${fmt(amount)} درهم${editingBonusId ? ' (تعديل)' : ''}`, `Bonus/deduction: ${fmt(amount)} DH${editingBonusId ? ' (edited)' : ''}`);
+async function saveBonus(btnEl) {
+  return runGuardedAction('saveBonus', btnEl, async () => {
+    const amount = +document.getElementById('bonusAmount').value;
+    const date = document.getElementById('bonusDate').value;
+    const type = document.getElementById('bonusType').value;
+    const reason = document.getElementById('bonusReason').value.trim();
+    if (!amount || !date) { alert(t('fillCharge')); return; }
+
+    const fp = `bonus_${currentBonusStaffId}_${date}_${amount}_${type}`;
+    if (!editingBonusId && isDuplicateTransaction(fp)) return;
+
+    if (editingBonusId) {
+      const b = state.bonuses.find(x => x.id === editingBonusId);
+      if (b) { b.date = date; b.amount = amount; b.type = type; b.reason = reason; }
+    } else {
+      state.bonuses.push({ id: uid(), staffId: currentBonusStaffId, date, amount, type, reason });
+    }
+
+    // IMMEDIATE OPTIMISTIC UI UPDATE
+    closeBonusModal();
+    renderStaff();
+    renderDashboard();
+    showActionToast(lang === 'ar' ? '✅ تم حفظ المنحة/الخصم' : '✅ Bonus/deduction saved', 'success');
+
+    // Background sync
+    await saveData();
+    notifyEdit(`منحة/خصم: ${fmt(amount)} درهم${editingBonusId ? ' (تعديل)' : ''}`, `Bonus/deduction: ${fmt(amount)} DH${editingBonusId ? ' (edited)' : ''}`);
+  });
 }
 
-async function deleteBonus(id) {
+async function deleteBonus(id, btnEl) {
   if (!confirm(t('confirmDelete'))) return;
-  const b = state.bonuses.find(x => x.id === id);
-  state.bonuses = state.bonuses.filter(b => b.id !== id);
-  await saveData();
-  renderStaff();
-  renderDashboard();
-  if (b) notifyEdit(`🗑️ حذف منحة/خصم: ${fmt(b.amount)} درهم`, `🗑️ Deleted bonus/deduction: ${fmt(b.amount)} DH`);
+  return runGuardedAction('deleteBonus_' + id, btnEl, async () => {
+    const b = state.bonuses.find(x => x.id === id);
+    state.bonuses = state.bonuses.filter(b => b.id !== id);
+
+    // Immediate UI update
+    renderStaff();
+    renderDashboard();
+    showActionToast(lang === 'ar' ? '🗑️ تم الحذف' : '🗑️ Deleted', 'warning');
+
+    await saveData();
+    if (b) notifyEdit(`🗑️ حذف منحة/خصم: ${fmt(b.amount)} درهم`, `🗑️ Deleted bonus/deduction: ${fmt(b.amount)} DH`);
+  });
 }
 
 /* ============== ATTENDANCE ============== */
@@ -7312,7 +7549,8 @@ function closeReminderModal() {
   document.getElementById('reminderModal').classList.remove('active');
 }
 
-async function saveReminder() {
+async function saveReminder(btnEl) {
+  return runGuardedAction("saveReminder", btnEl, async () => {
   const title = document.getElementById('reminderTitle').value.trim();
   let type = document.getElementById('reminderType').value;
   const dueDate = document.getElementById('reminderDueDate').value;
@@ -7343,11 +7581,17 @@ async function saveReminder() {
       status: 'pending', createdAt: todayStr()
     });
   }
-  await saveData();
+  // IMMEDIATE OPTIMISTIC UI UPDATE
   closeReminderModal();
   renderReminders();
   renderDashboard();
+  updateReminderBadge();
+  showActionToast(lang === 'ar' ? '✅ تم حفظ التذكير بنجاح' : '✅ Reminder saved successfully', 'success');
+
+  // Background sync
+  await saveData();
   notifyEdit(`تذكير: ${title} (${fmt(amount)} درهم)${editingReminderId ? ' (تعديل)' : ''}`, `Reminder: ${title} (${fmt(amount)} DH)${editingReminderId ? ' (edited)' : ''}`);
+  });
 }
 
 async function markReminderPaid(id) {
@@ -7638,7 +7882,8 @@ function closeCreditModal() {
   editingCreditId = null;
 }
 
-async function saveCredit() {
+async function saveCredit(btnEl) {
+  return runGuardedAction("saveCredit", btnEl, async () => {
   const ar = lang === 'ar';
   const lender = document.getElementById('creditLender').value.trim();
   const date = document.getElementById('creditDate').value;
@@ -7737,7 +7982,7 @@ async function saveCredit() {
       });
     }
   }
-  await saveData();
+  // IMMEDIATE OPTIMISTIC UI UPDATE
   closeCreditModal();
   renderCredits();
   renderReminders();
@@ -7746,7 +7991,12 @@ async function saveCredit() {
   if (document.getElementById('page-partners')?.classList.contains('active')) renderPartners();
   updateReminderBadge();
   updateCreditBadge();
+  showActionToast(lang === 'ar' ? '✅ تم حفظ السلفة بنجاح' : '✅ Credit saved successfully', 'success');
+
+  // Background sync
+  await saveData();
   notifyEdit(`سلفة: ${lender} — ${fmt(amount)} درهم${editingCreditId ? ' (تعديل)' : ' (جديدة)'}`, `Credit: ${lender} — ${fmt(amount)} DH${editingCreditId ? ' (edited)' : ' (new)'}`);
+  });
 }
 
 async function markCreditRepaid(id) {
@@ -8188,7 +8438,8 @@ function renderPaymentModal() {
   }
 }
 
-async function savePayment() {
+async function savePayment(btnEl) {
+  return runGuardedAction("savePayment", btnEl, async () => {
   const record = _findPaymentRecord(currentPaymentTarget);
   if (!record) return;
   const ar = lang === 'ar';
@@ -8215,28 +8466,34 @@ async function savePayment() {
   // Auto-sync record status if it has a status field (e.g., credits)
   _syncRecordStatus(record);
 
-  await saveData();
-  renderPaymentModal();
-  // Refresh the source page that opened us
-  _refreshAfterPayment();
-
-  // Reset input for next entry
+  // IMMEDIATE OPTIMISTIC UI UPDATE
   document.getElementById('paymentAmount').value = '';
   document.getElementById('paymentNote').value = '';
+  renderPaymentModal();
+  _refreshAfterPayment();
+  showActionToast(lang === 'ar' ? '✅ تمت إضافة الدفعة بنجاح' : '✅ Payment added successfully', 'success');
+
+  // Background sync
+  await saveData();
   notifyEdit(`دفعة: ${fmt(amount)} درهم${record.lender ? ' — '+record.lender : ''}`, `Payment: ${fmt(amount)} DH${record.lender ? ' — '+record.lender : ''}`);
+  });
 }
 
-async function deletePayment(paymentId) {
+async function deletePayment(paymentId, btnEl) {
   const record = _findPaymentRecord(currentPaymentTarget);
   if (!record || !Array.isArray(record.payments)) return;
-  if (!confirm(lang==='ar'?'حذف هذه الدفعة؟':'Delete this payment?')) return;
+  if (!confirm(lang==="ar"?"حذف هذه الدفعة؟":"Delete this payment?")) return;
+  return runGuardedAction("deletePayment_" + paymentId, btnEl, async () => {
   const delPay = record.payments.find(p => p.id === paymentId);
   record.payments = record.payments.filter(p => p.id !== paymentId);
   _syncRecordStatus(record);
-  await saveData();
+  // Immediate UI update
   renderPaymentModal();
   _refreshAfterPayment();
+  showActionToast(lang === 'ar' ? '🗑️ تم حذف الدفعة' : '🗑️ Payment deleted', 'warning');
+  await saveData();
   if (delPay) notifyEdit(`🗑️ حذف دفعة: ${fmt(delPay.amount)} درهم`, `🗑️ Deleted payment: ${fmt(delPay.amount)} DH`);
+  });
 }
 
 // Keep credit status & linked charges in sync with payments.
@@ -8585,7 +8842,8 @@ async function quickStaffFood() {
     : `✓ Daily charge added: STAFF FOOD ${fmt(amount)} DH/day, starting today.\nIt counts automatically every day. To stop it: charges list → ⏹️.`);
 }
 
-async function saveCharge() {
+async function saveCharge(btnEl) {
+  return runGuardedAction("saveCharge", btnEl, async () => {
   const type = document.getElementById('chargeType').value;
   let category = document.getElementById('chargeCategory').value;
   const description = document.getElementById('chargeDesc').value.trim();
@@ -8726,11 +8984,16 @@ async function saveCharge() {
     state.charges.push({ id: uid(), type: 'normal', date, category, description, amount, responsibility, customSplit });
   }
 
-  await saveData();
+  // IMMEDIATE OPTIMISTIC UI UPDATE
   closeChargeModal();
   renderCharges();
   renderDashboard();
+  showActionToast(lang === 'ar' ? '✅ تم حفظ المصروف بنجاح' : '✅ Expense saved successfully', 'success');
+
+  // Background sync
+  await saveData();
   notifyEdit(`مصروف: ${category}${description ? ' — '+description : ''} (${fmt(amount)} درهم)${editingChargeId ? ' (تعديل)' : ''}`, `Charge: ${category}${description ? ' — '+description : ''} (${fmt(amount)} DH)${editingChargeId ? ' (edited)' : ''}`);
+  });
 }
 
 function updateChargeMonthLabel() {
@@ -8925,25 +9188,31 @@ async function resumeDailyCharge(id) {
   renderDashboard();
 }
 
-async function deleteCharge(id) {
+async function deleteCharge(id, btnEl) {
   if (!confirm(t('confirmDelete'))) return;
-  const ch = state.charges.find(c => c.id === id);
-  state.charges = state.charges.filter(c => c.id !== id);
-  await saveData();
-  renderCharges();
-  renderDashboard();
-  if (ch) {
-    recordAuditEntry({
-      entityType: 'Expense',
-      entityId: ch.id,
-      entityRef: `Expense: ${ch.category || ''}${ch.description ? ' ('+ch.description+')' : ''}`,
-      field: 'Record Status',
-      oldValue: `${fmt(ch.amount)} DH (Active)`,
-      newValue: 'DELETED',
-      action: 'delete'
-    });
-    notifyEdit(`🗑️ حذف مصروف: ${ch.category||''} (${fmt(ch.amount)} درهم)`, `🗑️ Deleted charge: ${ch.category||''} (${fmt(ch.amount)} DH)`);
-  }
+  return runGuardedAction('deleteCharge_' + id, btnEl, async () => {
+    const ch = state.charges.find(c => c.id === id);
+    state.charges = state.charges.filter(c => c.id !== id);
+
+    // Immediate UI update
+    renderCharges();
+    renderDashboard();
+    showActionToast(lang === 'ar' ? '🗑️ تم حذف المصروف' : '🗑️ Expense deleted', 'warning');
+
+    await saveData();
+    if (ch) {
+      recordAuditEntry({
+        entityType: 'Expense',
+        entityId: ch.id,
+        entityRef: `Expense: ${ch.category || ''}${ch.description ? ' ('+ch.description+')' : ''}`,
+        field: 'Record Status',
+        oldValue: `${fmt(ch.amount)} DH (Active)`,
+        newValue: 'DELETED',
+        action: 'delete'
+      });
+      notifyEdit(`🗑️ حذف مصروف: ${ch.category||''} (${fmt(ch.amount)} درهم)`, `🗑️ Deleted charge: ${ch.category||''} (${fmt(ch.amount)} DH)`);
+    }
+  });
 }
 
 /* ============== REPORTS ============== */
@@ -10084,92 +10353,102 @@ function renderSettings() {
   });
 }
 
-async function saveSettings() {
-  const oldClubName = state.settings.clubName || '';
-  const oldCurrency = state.settings.currency || 'DH';
-  const newClubName = document.getElementById('clubName').value.trim();
-  const newCurrency = document.getElementById('clubCurrency').value.trim() || 'DH';
+async function saveSettings(btnEl) {
+  return runGuardedAction('saveSettings', btnEl, async () => {
+    const oldClubName = state.settings.clubName || '';
+    const oldCurrency = state.settings.currency || 'DH';
+    const newClubName = document.getElementById('clubName').value.trim();
+    const newCurrency = document.getElementById('clubCurrency').value.trim() || 'DH';
 
-  if (oldClubName !== newClubName) {
-    recordAuditEntry({
-      entityType: 'settings',
-      entityId: 'clubName',
-      entityRef: 'Club Name',
-      field: 'Club Name',
-      oldValue: oldClubName,
-      newValue: newClubName,
-      action: 'UPDATE',
-      branchId: currentBranchId
-    });
-  }
-  if (oldCurrency !== newCurrency) {
-    recordAuditEntry({
-      entityType: 'settings',
-      entityId: 'currency',
-      entityRef: 'Currency',
-      field: 'Currency',
-      oldValue: oldCurrency,
-      newValue: newCurrency,
-      action: 'UPDATE',
-      branchId: currentBranchId
-    });
-  }
+    if (oldClubName !== newClubName) {
+      recordAuditEntry({
+        entityType: 'settings',
+        entityId: 'clubName',
+        entityRef: 'Club Name',
+        field: 'Club Name',
+        oldValue: oldClubName,
+        newValue: newClubName,
+        action: 'UPDATE',
+        branchId: currentBranchId
+      });
+    }
+    if (oldCurrency !== newCurrency) {
+      recordAuditEntry({
+        entityType: 'settings',
+        entityId: 'currency',
+        entityRef: 'Currency',
+        field: 'Currency',
+        oldValue: oldCurrency,
+        newValue: newCurrency,
+        action: 'UPDATE',
+        branchId: currentBranchId
+      });
+    }
 
-  state.settings = {
-    ...state.settings,
-    clubName: newClubName,
-    currency: newCurrency
-  };
-  await saveData();
-  alert(t('saved'));
-  renderDashboard();
-  notifyEdit('⚙️ تغيير إعدادات النادي (الاسم/العملة)', '⚙️ Club settings changed (name/currency)');
+    state.settings = {
+      ...state.settings,
+      clubName: newClubName,
+      currency: newCurrency
+    };
+
+    // Immediate UI update
+    renderDashboard();
+    showActionToast(lang === 'ar' ? '✅ تم حفظ الإعدادات' : '✅ Settings saved', 'success');
+
+    await saveData();
+    notifyEdit('⚙️ تغيير إعدادات النادي (الاسم/العملة)', '⚙️ Club settings changed (name/currency)');
+  });
 }
 
-async function savePins() {
-  const op = document.getElementById('ownerPin').value.trim();
-  const mp = document.getElementById('managerPin').value.trim();
-  if (!op || !mp) {
-    alert(lang==='ar'?'الرجاء إدخال الرقمين السريين':'Please enter both PINs');
-    return;
-  }
-  if (op === mp) {
-    alert(lang==='ar'?'يجب أن يكون كل رقم سري مختلف':'PINs must be different');
-    return;
-  }
-  const oldOp = state.settings.ownerPin || '1234';
-  const oldMp = state.settings.managerPin || '0000';
-  if (oldOp !== op) {
-    recordAuditEntry({
-      entityType: 'settings',
-      entityId: 'ownerPin',
-      entityRef: 'Security PIN',
-      field: 'Owner PIN',
-      oldValue: '****',
-      newValue: '**** (Updated)',
-      action: 'UPDATE',
-      branchId: currentBranchId,
-      note: 'Owner PIN modified'
-    });
-  }
-  if (oldMp !== mp) {
-    recordAuditEntry({
-      entityType: 'settings',
-      entityId: 'managerPin',
-      entityRef: 'Security PIN',
-      field: 'Manager PIN',
-      oldValue: '****',
-      newValue: '**** (Updated)',
-      action: 'UPDATE',
-      branchId: currentBranchId,
-      note: 'Manager PIN modified'
-    });
-  }
-  state.settings.ownerPin = op;
-  state.settings.managerPin = mp;
-  await saveData();
-  alert(t('saved'));
-  notifyEdit('🔑 تغيير الأرقام السرية (Owner / Manager PIN)', '🔑 PINs changed (Owner / Manager)');
+async function savePins(btnEl) {
+  return runGuardedAction('savePins', btnEl, async () => {
+    const op = document.getElementById('ownerPin').value.trim();
+    const mp = document.getElementById('managerPin').value.trim();
+    if (!op || !mp) {
+      alert(lang==='ar'?'الرجاء إدخال الرقمين السريين':'Please enter both PINs');
+      return;
+    }
+    if (op === mp) {
+      alert(lang==='ar'?'يجب أن يكون كل رقم سري مختلف':'PINs must be different');
+      return;
+    }
+    const oldOp = state.settings.ownerPin || '1234';
+    const oldMp = state.settings.managerPin || '0000';
+    if (oldOp !== op) {
+      recordAuditEntry({
+        entityType: 'settings',
+        entityId: 'ownerPin',
+        entityRef: 'Security PIN',
+        field: 'Owner PIN',
+        oldValue: '****',
+        newValue: '**** (Updated)',
+        action: 'UPDATE',
+        branchId: currentBranchId,
+        note: 'Owner PIN modified'
+      });
+    }
+    if (oldMp !== mp) {
+      recordAuditEntry({
+        entityType: 'settings',
+        entityId: 'managerPin',
+        entityRef: 'Security PIN',
+        field: 'Manager PIN',
+        oldValue: '****',
+        newValue: '**** (Updated)',
+        action: 'UPDATE',
+        branchId: currentBranchId,
+        note: 'Manager PIN modified'
+      });
+    }
+    state.settings.ownerPin = op;
+    state.settings.managerPin = mp;
+
+    // Immediate UI update
+    showActionToast(lang === 'ar' ? '✅ تم حفظ الأرقام السرية بنجاح' : '✅ PINs saved successfully', 'success');
+
+    await saveData();
+    notifyEdit('🔑 تغيير الأرقام السرية (Owner / Manager PIN)', '🔑 PINs changed (Owner / Manager)');
+  });
 }
 
 async function resetData() {
@@ -10336,7 +10615,8 @@ function closeDebtModal() {
   document.getElementById('debtModal').classList.remove('active');
 }
 
-async function saveDebt() {
+async function saveDebt(btnEl) {
+  return runGuardedAction("saveDebt", btnEl, async () => {
   const creditor = document.getElementById('debtCreditor').value.trim();
   const reason = document.getElementById('debtReason').value.trim();
   const totalAmount = +document.getElementById('debtAmount').value;
@@ -10389,20 +10669,28 @@ async function saveDebt() {
     });
   }
 
-  await saveData();
+  // IMMEDIATE OPTIMISTIC UI UPDATE
   closeDebtModal();
   renderDebts();
   renderDashboard();
+  showActionToast(lang === 'ar' ? '✅ تم حفظ الدين بنجاح' : '✅ Debt saved successfully', 'success');
+
+  // Background sync
+  await saveData();
   notifyEdit(`🔒 دين قديم: ${creditor} — ${fmt(totalAmount)} درهم${editingDebtId ? ' (تعديل)' : ' (جديد)'}`, `🔒 Old debt: ${creditor} — ${fmt(totalAmount)} DH${editingDebtId ? ' (edited)' : ' (new)'}`);
+  });
 }
 
-async function deleteDebt(id) {
-  if (!confirm(t('confirmDelete'))) return;
+async function deleteDebt(id, btnEl) {
+  if (!confirm(t("confirmDelete"))) return;
+  return runGuardedAction("deleteDebt_" + id, btnEl, async () => {
   const d = (state.debts || []).find(x => x.id === id);
   state.debts = (state.debts || []).filter(d => d.id !== id);
-  await saveData();
+  // Immediate UI update
   renderDebts();
   renderDashboard();
+  showActionToast(lang === 'ar' ? '🗑️ تم حذف الدين' : '🗑️ Debt deleted', 'warning');
+  await saveData();
   if (d) {
     recordAuditEntry({
       entityType: 'Debt',
@@ -10415,6 +10703,7 @@ async function deleteDebt(id) {
     });
     notifyEdit(`🗑️🔒 حذف دين قديم: ${d.creditor} — ${fmt(d.totalAmount)} درهم`, `🗑️🔒 Deleted old debt: ${d.creditor} — ${fmt(d.totalAmount)} DH`);
   }
+  });
 }
 
 /* ---- Pay debt ---- */
@@ -10439,7 +10728,8 @@ function closePayDebtModal() {
   document.getElementById('payDebtModal').classList.remove('active');
 }
 
-async function saveDebtPayment() {
+async function saveDebtPayment(btnEl) {
+  return runGuardedAction("saveDebtPayment", btnEl, async () => {
   const d = (state.debts || []).find(x => x.id === currentPayDebtId);
   if (!d) { closePayDebtModal(); return; }
   const amount = +document.getElementById('payAmount').value;
@@ -10453,10 +10743,14 @@ async function saveDebtPayment() {
   if (!d.payments) d.payments = [];
   const payId = uid();
   d.payments.push({ id: payId, date, amount, note });
-  await saveData();
+  // IMMEDIATE OPTIMISTIC UI UPDATE
   closePayDebtModal();
   renderDebts();
   renderDashboard();
+  showActionToast(lang === 'ar' ? '✅ تم تأكيد خلاص الدين' : '✅ Debt payment confirmed', 'success');
+
+  // Background sync
+  await saveData();
 
   recordAuditEntry({
     entityType: 'Debt',
@@ -10469,9 +10763,12 @@ async function saveDebtPayment() {
   });
 
   notifyEdit(`🔒 خلاص دين: ${d.creditor} — ${fmt(amount)} درهم`, `🔒 Debt payment: ${d.creditor} — ${fmt(amount)} DH`);
+  });
 }
 
-async function deleteDebtPayment(debtId, payId) {
+async function deleteDebtPayment(debtId, payId, btnEl) {
+  if (!confirm(t("confirmDelete"))) return;
+  return runGuardedAction("deleteDebtPay_" + payId, btnEl, async () => {
   if (!confirm(t('confirmDelete'))) return;
   const d = (state.debts || []).find(x => x.id === debtId);
   if (!d) return;
@@ -10492,6 +10789,7 @@ async function deleteDebtPayment(debtId, payId) {
     });
     notifyEdit(`🗑️🔒 حذف خلاص دين: ${d.creditor} — ${fmt(dp.amount)} درهم`, `🗑️🔒 Deleted debt payment: ${d.creditor} — ${fmt(dp.amount)} DH`);
   }
+  });
 }
 
 /* ---- Render debts ---- */
