@@ -175,6 +175,31 @@ A secure, append-only modification history tracks all critical data updates acro
 
 ---
 
+## ⚡ Double-Click Prevention & Instant UI Updates (Laayoune & Tarfaya)
+
+A comprehensive UI interaction guard and transaction deduplication engine prevents accidental duplicate clicks, duplicate financial entries, and frozen interface states:
+
+- **0ms Visual Feedback**:
+  - Buttons immediately scale, enter a loading state (`.btn-processing`), and display an animated spinner upon clicking.
+  - Floating status toast (`showActionToast`) confirms the action instantly.
+- **Action Guard & Cooldown Locking**:
+  - Concurrency locks (`runGuardedAction`) temporarily disable the action trigger and suppress rapid clicks across a 320ms cooldown period.
+  - Global click listener intercepts and dampens rapid button clicks (< 280ms) across all modals, tables, and forms.
+- **Financial Deduplication Engine**:
+  - `isDuplicateTransaction` checks amount, date, and stakeholder/person fingerprints to reject duplicate database inserts within a 2.5s window.
+- **Optimistic State Updates**:
+  - Modals close and dashboard summaries update immediately, while cloud database synchronization completes asynchronously in the background without freezing the screen.
+- **Protected Operations**:
+  - Shifts (saving, closing, deleting)
+  - Charges & operating expenses
+  - Staff profiles, advances, and salary payments
+  - Client debts, advances, and payments
+  - Jetons sales & transfers
+  - Match queueing, frame additions, and score management
+  - Settings, PINs, and branch authentication
+
+---
+
 ## 🔒 Credentials & Roles
 
 | Branch | Role | Default PIN | Access Level |
