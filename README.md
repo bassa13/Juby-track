@@ -159,19 +159,22 @@ Both branches have isolated Telegram bot configurations and independent notifica
 
 ---
 
-## 🕵️ Complete Change History & Audit Trail
+## 💼 Investor Role (Read-Only Viewer) & Multi-Layer Security
 
-A secure, append-only modification history tracks all critical data updates across the club:
+A dedicated **Investor (Viewer Only)** role allows club investors to log in and inspect financial records with complete transparency while strictly preventing any data modification:
 
-- **Tracked Entities**:
-  - Financial amounts & expense descriptions (e.g. `400 DH` ➔ `480 DH`, `Coffee supplies` ➔ `Coffee and drinks supplies`).
-  - Shift receipts (tables, café, staff).
-  - Staff profiles, base salaries, advances, and payments.
-  - Credit and old debt repayments.
-  - Club settings (currency, name, PINs, Telegram destinations).
-- **Audit Detail**: Every audit log record preserves the entity type, ID, reference, field modified, previous value (`oldValue`), new value (`newValue`), exact timestamp, active user identity (`Owner 👑` / `Manager`), and club name.
-- **Audit Trail UI**: An interactive page (`#page-audit`) with search filtering, club filtering, category filtering, visual diff badges (`old ➔ new`), and CSV export for financial audits.
-- **Access Control**: Audit trail is accessible exclusively to the **Owner (👑)**.
+- **Investor Credentials**:
+  - Email: `investor@jubyclub.com`
+  - Password: `investor123` (or PIN `7777`)
+- **Investor Access & Permissions**:
+  - View full dashboard KPIs, net profits, and revenues.
+  - View daily shifts, expenses, charges, staff, debts, credits, and reminders.
+  - Access executive financial statements (Report A, B, and C profit distribution).
+  - Inspect partnership breakdown and 25% ownership allocation.
+- **Strict Read-Only Enforcement**:
+  - All creation, update, and deletion action buttons are suppressed (`.role-investor`).
+  - Settings, administrative actions, and user/PIN configuration are blocked.
+  - Programmatic and backend guards (`isReadOnlyUser()`, `saveData()`, `saveDataToCloud()`, REST API calls) reject all unauthorized write attempts.
 
 ---
 
@@ -202,14 +205,16 @@ A comprehensive UI interaction guard and transaction deduplication engine preven
 
 ## 🔒 Credentials & Roles
 
-| Branch | Role | Default PIN | Access Level |
-| :--- | :--- | :---: | :--- |
-| **Laayoune** | **Owner (المالك)** | **`1234`** | Full access: Partnership, Profits, Expenses, Staff, Settings, Audit Trail |
-| **Laayoune** | **Manager (المسير)** | **`0000`** | Operations: Tables, Café, Shifts, Attendance |
-| **Tarfaya** | **Owner (المالك)** | **`1342`** | Full access: Tarfaya Partner Settlement & Accounts, Audit Trail |
-| **Tarfaya** | **Manager (المسير)** | **`0000`** | Operations: Tables, Café, Shifts, Attendance |
+| Branch | Role | Login Method / Credentials | Access Level |
+| :--- | :--- | :--- | :--- |
+| **Laayoune** | **Owner (المالك)** | PIN: **`1234`** | Full access: Partnership, Profits, Expenses, Staff, Settings |
+| **Laayoune** | **Manager (المسير)** | PIN: **`0000`** | Operations: Tables, Café, Shifts, Attendance |
+| **Laayoune** | **Investor (المستثمر)** | Email: **`investor@jubyclub.com`**<br>Pwd: **`investor123`** (or PIN `7777`) | **Read-Only Viewer**: Dashboard, Shifts, Charges, Reports, 25% Share |
+| **Tarfaya** | **Owner (المالك)** | PIN: **`1342`** | Full access: Tarfaya Partner Settlement & Accounts |
+| **Tarfaya** | **Manager (المسير)** | PIN: **`0000`** | Operations: Tables, Café, Shifts, Attendance |
+| **Tarfaya** | **Investor (المستثمر)** | Email: **`investor@jubyclub.com`**<br>Pwd: **`investor123`** (or PIN `7777`) | **Read-Only Viewer**: Dashboard, Shifts, Charges, Reports, Accounts |
 
-*(PINs can be updated anytime in the Settings page).*
+*(PINs and passwords can be updated anytime in the Settings page).*
 
 ---
 

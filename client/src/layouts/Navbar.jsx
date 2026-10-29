@@ -5,6 +5,7 @@ export function Navbar({ activeTab, setActiveTab }) {
   const { t } = useTranslation();
   const currentUser = useJubyStore((state) => state.currentUser);
   const isAdmin = currentUser?.role === 'admin';
+  const isInvestor = currentUser?.role === 'investor';
 
   const tabs = [
     { key: 'tables', icon: '🎯', tkey: 'nav_tables' },
@@ -14,10 +15,13 @@ export function Navbar({ activeTab, setActiveTab }) {
     { key: 'history', icon: '📜', tkey: 'nav_history' }
   ];
 
+  if (isAdmin || isInvestor) {
+    tabs.push({ key: 'shifts', icon: '📋', tkey: 'nav_shifts', admin: isAdmin });
+    tabs.push({ key: 'reports', icon: '📊', tkey: 'nav_reports', admin: isAdmin });
+  }
+
   if (isAdmin) {
     tabs.push({ key: 'staff', icon: '👔', tkey: 'nav_staff', admin: true });
-    tabs.push({ key: 'shifts', icon: '📋', tkey: 'nav_shifts', admin: true });
-    tabs.push({ key: 'reports', icon: '📊', tkey: 'nav_reports', admin: true });
     tabs.push({ key: 'settings', icon: '⚙️', tkey: 'nav_settings', admin: true });
   }
 

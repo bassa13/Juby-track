@@ -111,7 +111,9 @@ const getInitialState = () => {
   // Load session
   const activeSessionId = localStorage.getItem(SESSION_KEY);
   let currentUser = null;
-  if (activeSessionId) {
+  if (activeSessionId === 'investor') {
+    currentUser = { id: 'investor', username: 'investor@jubyclub.com', name: 'Investor (Viewer Only)', role: 'investor' };
+  } else if (activeSessionId) {
     currentUser = parsedState.staff.find(s => s.id === activeSessionId) || null;
   }
 
@@ -161,7 +163,17 @@ export const useJubyStore = create((set, get) => {
     // Auth Actions
     login: (username, password) => {
       const { staff } = get();
-      const user = staff.find(s => s.username.toLowerCase() === username.toLowerCase() && s.password === password);
+      const uLower = (username || '').toLowerCase().trim();
+      
+      // Investor authentication (viewer only)
+      if ((uLower === 'investor' || uLower === 'investor@jubyclub.com' || uLower === 'investor@juby.com') && (password === 'investor123' || password === '7777')) {
+        const investorUser = { id: 'investor', username: 'investor@jubyclub.com', name: 'Investor (Viewer Only)', role: 'investor' };
+        localStorage.setItem(SESSION_KEY, 'investor');
+        set({ currentUser: investorUser });
+        return { success: true };
+      }
+
+      const user = staff.find(s => s.username.toLowerCase() === uLower && s.password === password);
       if (user) {
         localStorage.setItem(SESSION_KEY, user.id);
         set({ currentUser: user });

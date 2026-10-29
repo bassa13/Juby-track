@@ -14,9 +14,10 @@ export function Header() {
   const tables = useJubyStore((state) => state.tables);
 
   const isAdmin = currentUser?.role === 'admin';
+  const isInvestor = currentUser?.role === 'investor';
 
   // Calculate stats
-  const staffFilter = isAdmin ? null : currentUser?.id;
+  const staffFilter = (isAdmin || isInvestor) ? null : currentUser?.id;
   
   // Today's revenue: Admin sees all, Staff sees their own collected payments
   const todayRev = payments

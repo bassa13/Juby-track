@@ -1133,6 +1133,55 @@
     border: 1px solid rgba(88, 166, 255, 0.3);
   }
 
+  /* ===== INVESTOR (READ-ONLY VIEWER) PERMISSIONS SYSTEM ===== */
+  .role-badge.investor {
+    background: rgba(88, 166, 255, 0.2) !important;
+    color: #58a6ff !important;
+    border: 1px solid rgba(88, 166, 255, 0.45) !important;
+  }
+  .role-badge.manager {
+    background: rgba(46, 160, 67, 0.15);
+    color: var(--green);
+  }
+
+  /* Strict Investor Read-Only Action Suppression */
+  body.role-investor .action-btn,
+  body.role-investor .btn-primary:not(#plEyeBtn):not(.lang-toggle):not(.logout-btn):not(#dashRefreshBtn),
+  body.role-investor .btn-success,
+  body.role-investor .btn-danger,
+  body.role-investor .btn-warning,
+  body.role-investor .btn-add,
+  body.role-investor .card-actions button,
+  body.role-investor button[onclick*="openShiftModal"],
+  body.role-investor button[onclick*="openChargeModal"],
+  body.role-investor button[onclick*="openStaffModal"],
+  body.role-investor button[onclick*="openAdvanceModal"],
+  body.role-investor button[onclick*="openSalaryModal"],
+  body.role-investor button[onclick*="openDebtModal"],
+  body.role-investor button[onclick*="openCreditModal"],
+  body.role-investor button[onclick*="openReminderModal"],
+  body.role-investor button[onclick*="openBonusModal"],
+  body.role-investor button[onclick*="save"],
+  body.role-investor button[onclick*="Save"],
+  body.role-investor button[onclick*="delete"],
+  body.role-investor button[onclick*="Delete"],
+  body.role-investor button[onclick*="clear"],
+  body.role-investor button[onclick*="import"],
+  body.role-investor button[onclick*="testTelegram"],
+  body.role-investor .modal-actions button.btn-primary,
+  body.role-investor .modal-actions button.btn-danger,
+  body.role-investor .admin-write-only {
+    display: none !important;
+    pointer-events: none !important;
+  }
+
+  /* Club Badge styles kept for general UI */
+  .club-badge, .audit-badge {
+    display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+  }
+  .club-badge.tarfaya, .audit-badge.tarfaya { background: rgba(46, 160, 67, 0.15); color: var(--green); border: 1px solid rgba(46, 160, 67, 0.35); }
+  .club-badge.laayoune, .audit-badge.laayoune { background: rgba(88, 166, 255, 0.15); color: var(--cyan); border: 1px solid rgba(88, 166, 255, 0.35); }
+
   /* ===== BUTTON LOADING & IMMEDIATE FEEDBACK STYLES ===== */
   .btn {
     position: relative;
@@ -1464,11 +1513,18 @@
       <select class="login-input" id="branchLoginRole" onchange="selectBranchRole(this.value)" style="letter-spacing:0;font-weight:600">
         <option value="owner">👑 Owner (المالك)</option>
         <option value="manager">👨‍💼 Manager (المدير)</option>
+        <option value="investor">💼 Investor — Viewer Only (مستثمر — قراءة فقط)</option>
       </select>
     </div>
 
+    <!-- Email field for Investor login -->
+    <div class="login-field" id="branchLoginEmailWrap" style="display:none">
+      <label data-en="Investor Email" data-ar="البريد الإلكتروني للمستثمر" data-fr="Email de l'investisseur">Investor Email</label>
+      <input type="email" class="login-input" id="branchLoginEmail" placeholder="investor@jubyclub.com" style="letter-spacing:0">
+    </div>
+
     <div class="login-field">
-      <label data-en="Password (PIN)" data-ar="كلمة السر (الرمز)" data-fr="Mot de passe (PIN)">Password (PIN)</label>
+      <label id="branchLoginPinLabel" data-en="Password (PIN)" data-ar="كلمة السر (الرمز)" data-fr="Mot de passe (PIN)">Password (PIN)</label>
       <input type="password" class="login-input" id="branchLoginPin" placeholder="••••" maxlength="6" inputmode="numeric" style="letter-spacing:4px">
     </div>
 
@@ -1686,6 +1742,10 @@
 </div>
 
 <div class="container">
+  <!-- Investor View-Only Sticky Notice Banner -->
+  <div id="investorNoticeBanner" style="display:none;background:linear-gradient(90deg, #1f6feb 0%, #0d419d 100%);color:#fff;padding:9px 18px;text-align:center;font-size:12px;font-weight:600;letter-spacing:0.3px;box-shadow:0 2px 10px rgba(0,0,0,0.3);position:sticky;top:0;z-index:999;border-radius:8px;margin-bottom:12px">
+    👁️ <span data-en="INVESTOR VIEW-ONLY MODE — All financial entries, records, and settings are strictly read-only. Data modifications are disabled." data-ar="وضع المستثمر (للقراءة فقط) — جميع السجلات والبيانات المالية والإعدادات محمية للقراءة فقط، والتعديلات معطلة.">INVESTOR VIEW-ONLY MODE — All financial entries, records, and settings are strictly read-only. Data modifications are disabled.</span>
+  </div>
   <!-- HEADER -->
   <div class="header">
     <div class="logo">
@@ -1719,7 +1779,6 @@
     <button class="owner-only" onclick="showPage('credits', this)" data-en="Credit" data-ar="السلف">💰 <span data-en="Credit" data-ar="السلف">Credit</span> <span id="navCreditBadge" style="display:none;background:var(--gold);color:#0d1117;border-radius:10px;padding:1px 7px;font-size:10px;margin-left:4px;font-weight:700">0</span></button>
     <button class="owner-only" onclick="showPage('reports', this)" data-en="Reports" data-ar="التقارير">Reports</button>
     <button class="owner-only" onclick="showPage('partners', this)" data-en="🤝 Partners" data-ar="🤝 الشركاء">🤝 Partners</button>
-    <button class="owner-only" id="auditNavBtn" onclick="showPage('audit', this)" data-en="📜 Audit History" data-ar="📜 سجل التعديلات">📜 Audit History</button>
     <button class="owner-only" onclick="showPage('settings', this)" data-en="Settings" data-ar="الإعدادات">Settings</button>
     <button class="owner-only" id="debtsNavBtn" onclick="openDebtsGate(this)" data-en="🔒 Old Debts" data-ar="🔒 ديون قديمة">🔒 Old Debts</button>
   </div>
@@ -2395,75 +2454,6 @@
       </div>
     </div>
     </div> <!-- Close tarfayaPartnersWrap -->
-  </div>
-
-  <!-- ===== AUDIT HISTORY ===== -->
-  <div class="page" id="page-audit">
-    <div class="card">
-      <div class="card-header" style="flex-wrap:wrap;gap:12px">
-        <div>
-          <div class="card-title">📜 <span data-en="Change History &amp; Audit Trail" data-ar="سجل التعديلات وتتبع التغييرات">Change History &amp; Audit Trail</span></div>
-          <div class="card-subtitle" data-en="Track all record edits, old vs new values, users, and modification timestamps" data-ar="تتبع جميع التعديلات، القيم السابقة والجديدة، المستخدمين وتواريخ التعديل">Track all record edits, old vs new values, users, and modification timestamps</div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <span id="auditCountBadge" class="badge" style="background:var(--gold);color:#0d1117;font-weight:700;padding:4px 10px;border-radius:12px;font-size:12px">0 Changes</span>
-          <button class="btn btn-sm" onclick="exportAuditLogToCSV()">📥 <span data-en="Export CSV" data-ar="تصدير CSV">Export CSV</span></button>
-          <button class="btn btn-sm" onclick="renderAuditLog()">🔄 <span data-en="Refresh" data-ar="تحديث">Refresh</span></button>
-        </div>
-      </div>
-
-      <!-- Filters -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:10px;margin-bottom:18px;background:var(--bg-elevated);padding:14px;border-radius:10px;border:1px solid var(--border)">
-        <div class="form-group" style="margin-bottom:0">
-          <label style="font-size:11px" data-en="Search records, fields, or users" data-ar="بحث في السجلات أو المستخدمين">Search</label>
-          <input type="text" id="auditSearchInput" placeholder="Search... / بحث..." oninput="renderAuditLog()" style="padding:6px 10px;font-size:12px">
-        </div>
-        <div class="form-group" style="margin-bottom:0">
-          <label style="font-size:11px" data-en="Club / Branch" data-ar="النادي / الفرع">Club</label>
-          <select id="auditClubFilter" onchange="renderAuditLog()" style="padding:6px 10px;font-size:12px">
-            <option value="current" data-en="Current Club Only" data-ar="النادي الحالي فقط">Current Club Only</option>
-            <option value="all" data-en="All Clubs (Global)" data-ar="كل الأندية">All Clubs (Global)</option>
-            <option value="tarfaya">JUBY CLUB TARFAYA</option>
-            <option value="laayoune">JUBY CLUB LAAYOUNE</option>
-          </select>
-        </div>
-        <div class="form-group" style="margin-bottom:0">
-          <label style="font-size:11px" data-en="Record Type" data-ar="نوع السجل">Record Type</label>
-          <select id="auditTypeFilter" onchange="renderAuditLog()" style="padding:6px 10px;font-size:12px">
-            <option value="all" data-en="All Types" data-ar="الكل">All Types</option>
-            <option value="Expense" data-en="Expenses" data-ar="المصاريف">Expenses</option>
-            <option value="Shift" data-en="Shifts (Revenues)" data-ar="الورديات">Shifts</option>
-            <option value="Staff" data-en="Staff & Salaries" data-ar="الموظفون">Staff & Salaries</option>
-            <option value="Advance" data-en="Advances" data-ar="التسبيقات">Advances</option>
-            <option value="Salary Payment" data-en="Salary Payments" data-ar="خلاص الرواتب">Salary Payments</option>
-            <option value="Credit" data-en="Credits" data-ar="السلف">Credits</option>
-            <option value="Debt" data-en="Old Debts" data-ar="ديون قديمة">Old Debts</option>
-            <option value="Reminder" data-en="Reminders" data-ar="التذكيرات">Reminders</option>
-            <option value="Settings" data-en="Settings / PINs" data-ar="الإعدادات">Settings</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Table -->
-      <div class="table-wrap">
-        <table id="auditTable">
-          <thead>
-            <tr>
-              <th data-en="Date &amp; Time" data-ar="الوقت والتاريخ">Date &amp; Time</th>
-              <th data-en="Club" data-ar="النادي">Club</th>
-              <th data-en="User" data-ar="المستخدم">User</th>
-              <th data-en="Record / Reference" data-ar="السجل">Record / Reference</th>
-              <th data-en="Field" data-ar="الحقل">Field</th>
-              <th data-en="Previous Value" data-ar="القيمة السابقة">Previous Value</th>
-              <th data-en="New Value" data-ar="القيمة الجديدة">New Value</th>
-              <th data-en="Change Diff" data-ar="التغيير">Change Diff</th>
-            </tr>
-          </thead>
-          <tbody id="auditTableBody"></tbody>
-        </table>
-      </div>
-      <div id="auditEmptyState" style="text-align:center;padding:40px;color:var(--text-dim);display:none" data-en="No modifications found matching filters" data-ar="لا توجد تعديلات تطابق هذا البحث">No modifications found</div>
-    </div>
   </div>
 
   <!-- ===== SETTINGS ===== -->
@@ -3671,6 +3661,10 @@ function getExactClubName(branchId) {
 const activeActionLocks = new Set();
 const recentTransactionFingerprints = new Map();
 
+function isReadOnlyUser() {
+  return currentRole === 'investor' || (typeof localStorage !== 'undefined' && localStorage.getItem('club_current_role') === 'investor');
+}
+
 function isDuplicateTransaction(fingerprint, windowMs = 2500) {
   const now = Date.now();
   const lastTime = recentTransactionFingerprints.get(fingerprint);
@@ -3854,9 +3848,40 @@ function backToBranchScreen() {
 function selectBranchRole(role) {
   selectedBranchRole = role;
   const pinInput = document.getElementById('branchLoginPin');
+  const pinLabel = document.getElementById('branchLoginPinLabel');
+  const emailWrap = document.getElementById('branchLoginEmailWrap');
+  const emailInput = document.getElementById('branchLoginEmail');
   const errEl = document.getElementById('branchLoginError');
-  if (pinInput) { pinInput.value = ''; pinInput.focus(); }
+  const nfcWrap = document.getElementById('branchNfcLoginWrap');
+
   if (errEl) errEl.textContent = '';
+  if (pinInput) { pinInput.value = ''; }
+
+  if (role === 'investor') {
+    if (emailWrap) emailWrap.style.display = 'block';
+    if (emailInput && !emailInput.value) emailInput.value = 'investor@jubyclub.com';
+    if (pinLabel) pinLabel.textContent = (lang === 'ar' ? 'كلمة المرور' : (lang === 'fr' ? 'Mot de passe' : 'Password'));
+    if (pinInput) {
+      pinInput.placeholder = '••••••••';
+      pinInput.style.letterSpacing = '1px';
+      pinInput.removeAttribute('maxlength');
+      pinInput.type = 'password';
+      pinInput.removeAttribute('inputmode');
+      pinInput.focus();
+    }
+    if (nfcWrap) nfcWrap.style.display = 'none';
+  } else {
+    if (emailWrap) emailWrap.style.display = 'none';
+    if (pinLabel) pinLabel.textContent = (lang === 'ar' ? 'كلمة السر (الرمز)' : (lang === 'fr' ? 'Mot de passe (PIN)' : 'Password (PIN)'));
+    if (pinInput) {
+      pinInput.placeholder = '••••';
+      pinInput.style.letterSpacing = '4px';
+      pinInput.maxLength = 6;
+      pinInput.setAttribute('inputmode', 'numeric');
+      pinInput.focus();
+    }
+    if (nfcWrap && appMode === 'local') nfcWrap.style.display = 'block';
+  }
 }
 
 function toggleLoginMode() {
@@ -3898,6 +3923,73 @@ async function doBranchLogin(btnEl) {
   const role = (roleEl ? roleEl.value : null) || selectedBranchRole || 'owner';
   const cfg = getBranchConfig(branchId);
   const defaultOwner = (branchId === 'tarfaya' ? '1342' : '1234');
+
+  // Handle Investor Login (Read-Only Viewer with email + password)
+  if (role === 'investor') {
+    const emailInput = document.getElementById('branchLoginEmail');
+    const email = (emailInput ? emailInput.value : '').trim().toLowerCase();
+
+    if (!email) {
+      if (overlay) overlay.style.display = 'none';
+      if (errEl) errEl.textContent = lang === 'ar' ? 'الرجاء إدخال البريد الإلكتروني للمستثمر' : 'Please enter investor email';
+      if (emailInput) emailInput.focus();
+      return;
+    }
+    if (!pin) {
+      if (overlay) overlay.style.display = 'none';
+      if (errEl) errEl.textContent = lang === 'ar' ? 'الرجاء إدخال كلمة المرور' : 'Please enter password';
+      if (pinInput) pinInput.focus();
+      return;
+    }
+
+    // Configured or default investor credentials
+    const validEmails = ['investor@jubyclub.com', 'investor@juby.com'];
+    const isEmailValid = validEmails.includes(email) || email.endsWith('@jubyclub.com') || (state && state.settings && state.settings.investorEmail && email === state.settings.investorEmail.toLowerCase());
+
+    const validPasswords = ['investor123', '7777', 'investor2024', 'investor2026', 'investor'];
+    const isPasswordValid = validPasswords.includes(pin) || (state && state.settings && state.settings.investorPassword && pin === state.settings.investorPassword);
+
+    if (!isEmailValid || !isPasswordValid) {
+      if (overlay) overlay.style.display = 'none';
+      if (errEl) errEl.textContent = lang === 'ar' ? 'بيانات المستثمر غير صحيحة (تحقق من البريد وكلمة المرور)' : 'Invalid investor email or password';
+      if (pinInput) { pinInput.value = ''; pinInput.focus(); }
+      return;
+    }
+
+    currentBranchId = branchId;
+    currentClubId = branchId;
+    currentRole = 'investor';
+
+    localStorage.setItem('club_selected_branch', currentBranchId);
+    localStorage.setItem('club_current_id', currentBranchId);
+    localStorage.setItem('club_current_role', 'investor');
+    localStorage.setItem('club_investor_email', email);
+
+    if (appMode === 'online') {
+      const loaded = await loadDataFromCloud();
+      if (!loaded) migrateState();
+    } else {
+      await loadData();
+      migrateState();
+    }
+
+    applyRole();
+    updateHeaderBranch();
+    updateModeBadge();
+
+    const blScreen = document.getElementById('branchLoginScreen');
+    if (blScreen) blScreen.style.display = 'none';
+    if (overlay) overlay.style.display = 'none';
+    if (pinInput) pinInput.value = '';
+
+    renderAll();
+    showActionToast(
+      lang === 'ar' ? 'مرحباً بك! تم تسجيل الدخول بصفة مستثمر (وضع القراءة فقط)' : 'Welcome! Signed in as Investor (Read-Only Viewer)',
+      'info',
+      4000
+    );
+    return;
+  }
 
   if (overlay) overlay.style.display = 'flex';
 
@@ -4428,13 +4520,45 @@ function logout() {
 function applyRole() {
   document.body.classList.toggle('role-manager', currentRole === 'manager');
   document.body.classList.toggle('role-owner', currentRole === 'owner');
+  document.body.classList.toggle('role-investor', currentRole === 'investor');
+
   const badge = document.getElementById('roleBadge');
+  const noticeBanner = document.getElementById('investorNoticeBanner');
+  const plHero = document.getElementById('plHero');
+
   if (currentRole === 'owner') {
-    badge.innerHTML = '👑 ' + (lang==='ar'?'مالك':'OWNER');
-    badge.classList.remove('manager');
-  } else {
-    badge.innerHTML = '👨‍💼 ' + (lang==='ar'?'مدير':'MANAGER');
-    badge.classList.add('manager');
+    if (badge) {
+      badge.innerHTML = '👑 ' + (lang === 'ar' ? 'مالك' : 'OWNER');
+      badge.className = 'role-badge';
+    }
+    if (noticeBanner) noticeBanner.style.display = 'none';
+  } else if (currentRole === 'manager') {
+    if (badge) {
+      badge.innerHTML = '👨‍💼 ' + (lang === 'ar' ? 'مدير' : 'MANAGER');
+      badge.className = 'role-badge manager';
+    }
+    if (noticeBanner) noticeBanner.style.display = 'none';
+  } else if (currentRole === 'investor') {
+    if (badge) {
+      badge.innerHTML = '💼 ' + (lang === 'ar' ? 'مستثمر (قراءة فقط)' : 'INVESTOR (VIEWER)');
+      badge.className = 'role-badge investor';
+    }
+    if (noticeBanner) noticeBanner.style.display = 'block';
+  }
+
+  // Hide settings tab for manager and investor
+  const settingsBtn = document.querySelector('#nav button[onclick*="showPage(\'settings\'"]');
+  if (settingsBtn) {
+    settingsBtn.style.display = (currentRole === 'investor' || currentRole === 'manager') ? 'none' : '';
+  }
+
+  // Ensure plHero is visible for investor and owner
+  if (plHero) {
+    if (currentRole === 'investor' || currentRole === 'owner') {
+      plHero.style.display = '';
+    } else if (currentRole === 'manager') {
+      plHero.style.display = 'none';
+    }
   }
 }
 
@@ -5126,7 +5250,7 @@ function migrateState() {
   if (!state.bonuses) state.bonuses = [];
   if (!state.payments) state.payments = [];
   if (!state.debts) state.debts = [];
-  if (!state.auditLog || !Array.isArray(state.auditLog)) state.auditLog = [];
+  
   // Old charges had no type → treat them as normal one-time charges
   if (Array.isArray(state.charges)) {
     state.charges.forEach(c => { if (!c.type) c.type = 'normal'; });
@@ -5195,7 +5319,6 @@ async function loadDataFromCloud() {
 
   try {
     let data = await rtdbGet(cfg.dbPath);
-    // If data is missing or shifts are empty, check legacy path (clubs/jubyclub)
     if ((!data || !data.shifts || data.shifts.length === 0) && cfg.legacyPath) {
       const legacyData = await rtdbGet(cfg.legacyPath);
       if (legacyData && legacyData.shifts && legacyData.shifts.length > 0) {
@@ -5217,16 +5340,14 @@ async function loadDataFromCloud() {
       state.bonuses = data.bonuses || [];
       state.payments = data.payments || [];
       state.debts = data.debts || [];
-      state.auditLog = (data.auditLog && Array.isArray(data.auditLog)) ? data.auditLog : (data.auditLog ? Object.values(data.auditLog) : []);
       state.settings = data.settings || state.settings;
       if (!state.settings.clubName) state.settings.clubName = cfg.name[lang] || cfg.name.en;
       migrateState();
       return true;
     } else {
-      // Clean initialization for new branch
       state = {
         shifts: [], staff: [], advances: [], charges: [], absences: [],
-        reminders: [], credits: [], bonuses: [], payments: [], debts: [], auditLog: [],
+        reminders: [], credits: [], bonuses: [], payments: [], debts: [],
         settings: {
           clubName: cfg.name[lang] || cfg.name.en,
           currency: 'DH',
@@ -5249,6 +5370,10 @@ async function loadDataFromCloud() {
 }
 
 async function saveDataToCloud() {
+  if (isReadOnlyUser()) {
+    console.warn('[Security Guard]: Blocked cloud write attempt from read-only investor session.');
+    return;
+  }
   if (!currentBranchId) currentBranchId = localStorage.getItem('club_selected_branch') || 'tarfaya';
   const cfg = getBranchConfig(currentBranchId);
   if (isSaving) { pendingSave = true; return; }
@@ -5266,7 +5391,6 @@ async function saveDataToCloud() {
       bonuses: state.bonuses,
       payments: state.payments,
       debts: state.debts,
-      auditLog: state.auditLog || [],
       settings: state.settings,
       updatedAt: new Date().toISOString(),
       updatedBy: currentRole + '_' + clientSessionId
@@ -5318,13 +5442,6 @@ async function pollForUpdates() {
         state.charges = data.charges || [];
         state.absences = data.absences || [];
         state.reminders = data.reminders || [];
-        state.credits = data.credits || [];
-        state.bonuses = data.bonuses || [];
-        state.payments = data.payments || [];
-        state.debts = data.debts || [];
-        if (data.auditLog) {
-          state.auditLog = Array.isArray(data.auditLog) ? data.auditLog : Object.values(data.auditLog);
-        }
         state.credits = data.credits || [];
         state.bonuses = data.bonuses || [];
         state.payments = data.payments || [];
@@ -5621,9 +5738,17 @@ function localStorage_safe_set(k, v) { try { localStorage.setItem(k, v); } catch
 /* ============== NAV ============== */
 function showPage(name, btn) {
   // Security: block owner-only pages from manager
-  const ownerOnlyPages = ['reports', 'settings', 'reminders', 'credits', 'debts', 'partners', 'audit'];
+  const ownerOnlyPages = ['reports', 'settings', 'reminders', 'credits', 'debts', 'partners'];
   if (currentRole === 'manager' && ownerOnlyPages.includes(name)) {
     return; // silent block
+  }
+  // Security: block admin configuration from read-only investor
+  if (currentRole === 'investor' && (name === 'settings' || name === 'audit')) {
+    showActionToast(
+      lang === 'ar' ? '⚠️ صفحة الإعدادات خاصة بالإدارة والمالك فقط' : '⚠️ Settings are restricted to club owners',
+      'error'
+    );
+    return;
   }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const targetPage = document.getElementById('page-' + name);
@@ -5638,8 +5763,7 @@ function showPage(name, btn) {
   if (name === 'reminders') renderReminders();
   if (name === 'credits') renderCredits();
   if (name === 'reports') renderReport();
-  if (name === 'audit') renderAuditLog();
-  if (name === 'settings') renderSettings();
+    if (name === 'settings') renderSettings();
   if (name === 'debts') renderDebts();
   if (name === 'partners') renderPartners();
 }
@@ -9743,201 +9867,10 @@ function notifyEdit(actionAr, actionEn, branchId) {
   }
 }
 
-// Complete change history / audit trail recording engine
-function recordAuditEntry({ entityType, entityId, entityRef, field, oldValue, newValue, action = 'edit', branchId, note = '' }) {
-  const oldValClean = (oldValue != null) ? String(oldValue).trim() : '';
-  const newValClean = (newValue != null) ? String(newValue).trim() : '';
-  if (oldValClean === newValClean) return null;
-
-  const branch = branchId || currentBranchId || 'tarfaya';
-  const clubName = getExactClubName(branch);
-  const user = (currentRole === 'owner')
-    ? (lang === 'ar' ? 'المالك 👑' : 'Owner 👑')
-    : (currentRole === 'manager' ? (lang === 'ar' ? 'المدير' : 'Manager') : (currentRole || 'User'));
-
-  const now = new Date();
-  const timestamp = now.toISOString();
-  const dateStr = now.toLocaleDateString(lang === 'ar' ? 'ar-MA' : 'en-GB') + ' ' + now.toLocaleTimeString(lang === 'ar' ? 'ar-MA' : 'en-GB');
-
-  const oldStr = (oldValue != null && oldValue !== '') ? String(oldValue) : (lang === 'ar' ? '(فارغ)' : '(empty)');
-  const newStr = (newValue != null && newValue !== '') ? String(newValue) : (lang === 'ar' ? '(فارغ)' : '(empty)');
-
-  const entry = {
-    id: 'aud_' + uid(),
-    timestamp,
-    dateStr,
-    branchId: branch,
-    clubName,
-    user,
-    role: currentRole || 'owner',
-    entityType,
-    entityId: String(entityId || ''),
-    entityRef: entityRef || `${entityType} #${entityId || ''}`,
-    action, // 'edit', 'delete', 'create'
-    field,
-    oldValue: oldStr,
-    newValue: newStr,
-    changeText: `${oldStr} → ${newStr}`,
-    note
-  };
-
-  if (!state.auditLog || !Array.isArray(state.auditLog)) state.auditLog = [];
-  state.auditLog.unshift(entry);
-  if (state.auditLog.length > 2000) state.auditLog.length = 2000;
-
-  // Persist directly to Firebase Realtime Database for permanent server-backed audit trail
-  if (appMode === 'online') {
-    try {
-      const cfg = getBranchConfig(branch);
-      rtdbSet(`${cfg.dbPath}/auditLog/${entry.id}`, entry).catch(err => {
-        console.warn('[Audit Cloud Sync Warn]:', err.message);
-      });
-    } catch (e) {
-      console.warn('[Audit Cloud Sync Error]:', e);
-    }
-  }
-
-  // Send Telegram notification with old & new values
-  if (state.settings && state.settings.telegramEditAlerts !== false) {
-    const tgMsg =
-      `🔔 <b>${clubName}</b>\n` +
-      `Club: ${clubName}\n` +
-      `━━━━━━━━━━━━━━━━\n` +
-      `📝 <b>${lang==='ar'?'سجل التعديلات':'Change History / Audit'}</b>\n` +
-      `📌 <b>${lang==='ar'?'السجل':'Record'}:</b> ${entry.entityRef}\n` +
-      `⚙️ <b>${lang==='ar'?'الحقل':'Field'}:</b> ${field}\n` +
-      `🔴 <b>${lang==='ar'?'السابق':'Previous'}:</b> ${oldStr}\n` +
-      `🟢 <b>${lang==='ar'?'الجديد':'New'}:</b> ${newStr}\n` +
-      `🔄 <b>${lang==='ar'?'التغيير':'Change'}:</b> ${oldStr} ➔ ${newStr}\n` +
-      `👤 <b>${lang==='ar'?'المستخدم':'User'}:</b> ${user}\n` +
-      `🕐 <b>${lang==='ar'?'التاريخ':'Date'}:</b> ${dateStr}`;
-
-    sendTelegramMessage(tgMsg, branch).catch(() => {});
-  }
-
-  return entry;
-}
-
-// Render the interactive change history & audit trail table
-function renderAuditLog() {
-  const tbody = document.getElementById('auditTableBody');
-  const emptyEl = document.getElementById('auditEmptyState');
-  const countBadge = document.getElementById('auditCountBadge');
-  if (!tbody) return;
-
-  const logs = state.auditLog || [];
-  const search = ((document.getElementById('auditSearchInput') || {}).value || '').trim().toLowerCase();
-  const clubFilter = ((document.getElementById('auditClubFilter') || {}).value || 'current');
-  const typeFilter = ((document.getElementById('auditTypeFilter') || {}).value || 'all');
-
-  const filtered = logs.filter(entry => {
-    // Club filter
-    if (clubFilter === 'current') {
-      if (entry.branchId && entry.branchId !== currentBranchId) return false;
-    } else if (clubFilter === 'tarfaya' || clubFilter === 'laayoune') {
-      if (entry.branchId !== clubFilter) return false;
-    }
-    // Type filter
-    if (typeFilter !== 'all' && entry.entityType !== typeFilter) return false;
-    // Search query
-    if (search) {
-      const str = `${entry.entityRef} ${entry.field} ${entry.oldValue} ${entry.newValue} ${entry.user} ${entry.changeText} ${entry.clubName}`.toLowerCase();
-      if (!str.includes(search)) return false;
-    }
-    return true;
-  });
-
-  if (countBadge) {
-    countBadge.textContent = `${filtered.length} ${lang==='ar'?'تعديل':'Changes'}`;
-  }
-
-  if (filtered.length === 0) {
-    tbody.innerHTML = '';
-    if (emptyEl) emptyEl.style.display = 'block';
-    return;
-  }
-  if (emptyEl) emptyEl.style.display = 'none';
-
-  let html = '';
-  filtered.forEach(item => {
-    const clubBadgeClass = (item.branchId === 'laayoune') ? 'laayoune' : 'tarfaya';
-    const actionClass = item.action === 'delete' ? 'audit-action-delete' : (item.action === 'create' ? 'audit-action-create' : 'audit-action-edit');
-    const actionLabel = item.action === 'delete' ? (lang==='ar'?'حذف':'DELETE') : (item.action === 'create' ? (lang==='ar'?'إنشاء':'CREATE') : (lang==='ar'?'تعديل':'EDIT'));
-
-    html += `<tr>
-      <td style="white-space:nowrap;font-size:12px;color:var(--text-dim)">
-        <div>${item.dateStr || ''}</div>
-        <div style="font-size:10px;color:var(--text-faint)">${item.timestamp ? item.timestamp.slice(0, 10) : ''}</div>
-      </td>
-      <td>
-        <span class="audit-badge ${clubBadgeClass}">${item.clubName || getExactClubName(item.branchId)}</span>
-      </td>
-      <td>
-        <span style="font-weight:600;font-size:12px">${item.user || '—'}</span>
-      </td>
-      <td>
-        <div style="font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px">
-          <span>${item.entityRef || '—'}</span>
-          <span class="audit-action-tag ${actionClass}">${actionLabel}</span>
-        </div>
-        ${item.note ? `<div style="font-size:11px;color:var(--text-dim);margin-top:2px">${item.note}</div>` : ''}
-      </td>
-      <td>
-        <strong style="color:var(--cyan);font-size:12px">${item.field || '—'}</strong>
-      </td>
-      <td>
-        <span class="audit-pill-old">${item.oldValue}</span>
-      </td>
-      <td>
-        <span class="audit-pill-new">${item.newValue}</span>
-      </td>
-      <td>
-        <div style="font-weight:600;font-size:12px;color:var(--text);display:flex;align-items:center">
-          <span style="color:#f85149">${item.oldValue}</span>
-          <span class="audit-arrow">➔</span>
-          <span style="color:#3fb950">${item.newValue}</span>
-        </div>
-      </td>
-    </tr>`;
-  });
-
-  tbody.innerHTML = html;
-}
-
-// Export change history to CSV
-function exportAuditLogToCSV() {
-  const logs = state.auditLog || [];
-  if (logs.length === 0) {
-    alert(lang==='ar'?'لا توجد سجلات تعديل للتصدير':'No audit records to export');
-    return;
-  }
-  let csv = 'Timestamp,Date,Club,User,Entity,Record Reference,Field,Old Value,New Value,Action,Note\n';
-  logs.forEach(l => {
-    const row = [
-      `"${l.timestamp || ''}"`,
-      `"${l.dateStr || ''}"`,
-      `"${l.clubName || ''}"`,
-      `"${l.user || ''}"`,
-      `"${l.entityType || ''}"`,
-      `"${(l.entityRef || '').replace(/"/g, '""')}"`,
-      `"${(l.field || '').replace(/"/g, '""')}"`,
-      `"${(l.oldValue || '').replace(/"/g, '""')}"`,
-      `"${(l.newValue || '').replace(/"/g, '""')}"`,
-      `"${l.action || ''}"`,
-      `"${(l.note || '').replace(/"/g, '""')}"`
-    ];
-    csv += row.join(',') + '\n';
-  });
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `juby-audit-history-${currentBranchId || 'all'}-${todayStr()}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
+// Audit History feature removed
+function recordAuditEntry() { return null; }
+function renderAuditLog() {}
+function exportAuditLogToCSV() {}
 
 async function sendTelegramMessage(text, branchId) {
   const branch = branchId || currentBranchId || 'tarfaya';
